@@ -1,28 +1,96 @@
-@pytest.mark.usefixtures("chrome_driver")
-class TestGoogleWithPytest:
-    """Тесты с использованием вашей существующей фикстуры"""
+from django.test import LiveServerTestCase
+from selenium.webdriver.common.by import By
+import pytest
+import requests
+import os
+import sys
+
+# Добавляем путь к родительской папке (где лежит driver_check.py)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Теперь можно импортировать вашу фикстуру
+from driver_check import chrome_driver
+
+
+class SimpleGoogleTest(LiveServerTestCase):
+    """Простой тест для проверки Google.com"""
     
-    def test_google_with_fixture(self, chrome_driver):
-        """Используем вашу фикстуру chrome_driver"""
-        chrome_driver.get("https://www.google.com")
+    @classmethod
+    def setUpClass(cls):
+        """Инициализация драйвера"""
+        super().setUpClass()
+        from selenium import webdriver
+        from selenium.webdriver.chrome.options import Options
+        from selenium.webdriver.chrome.service import Service
         
-        # Проверяем статус через Selenium (не прямой, но косвенный)
+        # Путь к драйверу (в папке выше, где manage.py)
+        driver_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "chromedriver.exe")
+        service = Service(executable_path=driver_path)
+        options = Options()
+        options.add_argument("--start-maximized")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        
+        cls.driver = webdriver.Chrome(service=service, options=options)
+        cls.driver.implicitly_wait(10)
+    
+    @classmethod
+    def tearDownClass(cls):
+        """Закрытие драйвера"""
+        cls.driver.quit()
+        super().tearDownClass()
+    
+    def test_google_status_code(self):
+        """Тест 1: Проверка статуса 200 для Google"""
+        response = requests.get("https://www.google.com")
+        assert response.status_code == 200
+        print(f"✓ Google.com вернул статус: {response.status_code}")
+    
+    def test_google_page_title(self):
+        """Тест 2: Проверка заголовка Google через Selenium"""
+        self.driver.get("https://www.google.com")
+        assert "Google" in self.driver.title
+        print(f"✓ Заголовок страницы: {self.driver.title}")
+    
+    def test_google_search_field(self):
+        """Тест 3: Проверка наличия поля поиска"""
+        self.driver.get("https://www.google.com")
+        
+        search_selectors = [
+            (By.NAME, "q"),
+            (By.CSS_SELECTOR, "input[name='q']"),
+            (By.XPATH, "//input[@type='text']")
+        ]
+        
+        search_field = None
+        for by, value in search_selectors:
+            try:
+                search_field = self.driver.find_element(by, value)
+                print(f"✓ Найдено поле поиска по локатору: {by}={value}")
+                break
+            except:
+                continue
+        
+        assert search_field is not None, "Поле поиска не найдено"
+        print("✓ Поле поиска присутствует на странице")
+
+
+# Тесты с использованием вашей фикстуры
+@pytest.mark.usefixtures("chrome_driver")
+class TestGoogleWithYourFixture:
+    """Тесты с использованием вашей chrome_driver фикстуры"""
+    
+    def test_google_with_your_fixture(self, chrome_driver):
+        """Используем вашу фикстуру из driver_check.py"""
+        chrome_driver.get("https://www.google.com")
         assert "Google" in chrome_driver.title
         print(f"✓ Успешно открыли Google, заголовок: {chrome_driver.title}")
-        
-        # Получаем текущий URL для проверки
-        current_url = chrome_driver.current_url
-        assert "google" in current_url.lower()
-        print(f"✓ Текущий URL: {current_url}")
     
     def test_google_response_status(self, chrome_driver):
-        """Проверка статуса ответа через перехват (сложнее)"""
-        # Проще использовать requests для статуса
+        """Проверка через requests"""
         import requests
         response = requests.get("https://www.google.com")
         assert response.status_code == 200
         print(f"✓ Google отвечает с кодом {response.status_code}")
-
 
 Шаг 5: Создаем веб-интерфейс для запуска тестов
 
