@@ -1,325 +1,150 @@
-from django.test import LiveServerTestCase
-from selenium.webdriver.common.by import By
-import pytest
-import requests
-import os
-import sys
-
-# Добавляем путь к родительской папке (где лежит driver_check.py)
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Теперь можно импортировать вашу фикстуру
-from driver_check import chrome_driver
-
-
-class SimpleGoogleTest(LiveServerTestCase):
-    """Простой тест для проверки Google.com"""
-    
-    @classmethod
-    def setUpClass(cls):
-        """Инициализация драйвера"""
-        super().setUpClass()
-        from selenium import webdriver
-        from selenium.webdriver.chrome.options import Options
-        from selenium.webdriver.chrome.service import Service
-        
-        # Путь к драйверу (в папке выше, где manage.py)
-        driver_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "chromedriver.exe")
-        service = Service(executable_path=driver_path)
-        options = Options()
-        options.add_argument("--start-maximized")
-        options.add_argument("--disable-blink-features=AutomationControlled")
-        
-        cls.driver = webdriver.Chrome(service=service, options=options)
-        cls.driver.implicitly_wait(10)
-    
-    @classmethod
-    def tearDownClass(cls):
-        """Закрытие драйвера"""
-        cls.driver.quit()
-        super().tearDownClass()
-    
-    def test_google_status_code(self):
-        """Тест 1: Проверка статуса 200 для Google"""
-        response = requests.get("https://www.google.com")
-        assert response.status_code == 200
-        print(f"✓ Google.com вернул статус: {response.status_code}")
-    
-    def test_google_page_title(self):
-        """Тест 2: Проверка заголовка Google через Selenium"""
-        self.driver.get("https://www.google.com")
-        assert "Google" in self.driver.title
-        print(f"✓ Заголовок страницы: {self.driver.title}")
-    
-    def test_google_search_field(self):
-        """Тест 3: Проверка наличия поля поиска"""
-        self.driver.get("https://www.google.com")
-        
-        search_selectors = [
-            (By.NAME, "q"),
-            (By.CSS_SELECTOR, "input[name='q']"),
-            (By.XPATH, "//input[@type='text']")
-        ]
-        
-        search_field = None
-        for by, value in search_selectors:
-            try:
-                search_field = self.driver.find_element(by, value)
-                print(f"✓ Найдено поле поиска по локатору: {by}={value}")
-                break
-            except:
-                continue
-        
-        assert search_field is not None, "Поле поиска не найдено"
-        print("✓ Поле поиска присутствует на странице")
-
-
-# Тесты с использованием вашей фикстуры
-@pytest.mark.usefixtures("chrome_driver")
-class TestGoogleWithYourFixture:
-    """Тесты с использованием вашей chrome_driver фикстуры"""
-    
-    def test_google_with_your_fixture(self, chrome_driver):
-        """Используем вашу фикстуру из driver_check.py"""
-        chrome_driver.get("https://www.google.com")
-        assert "Google" in chrome_driver.title
-        print(f"✓ Успешно открыли Google, заголовок: {chrome_driver.title}")
-    
-    def test_google_response_status(self, chrome_driver):
-        """Проверка через requests"""
-        import requests
-        response = requests.get("https://www.google.com")
-        assert response.status_code == 200
-        print(f"✓ Google отвечает с кодом {response.status_code}")
-
-Шаг 5: Создаем веб-интерфейс для запуска тестов
-
-# web_tests/views.py
+# D:/Autotests/testapp/main/views.py
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 import subprocess
 import json
-from io import StringIO
-import sys
+import os
+import traceback
 
 
 def test_runner_dashboard(request):
     """Дашборд для запуска тестов"""
-    return render(request, 'web_tests/dashboard.html')
+    return render(request, 'main/dashboard.html')
 
 
 @csrf_exempt
+@require_http_methods(["POST"])
 def run_tests_api(request):
     """API для запуска тестов"""
-    if request.method == 'POST':
+    try:
+        # Пробуем распарсить JSON
         try:
-            data = json.loads(request.body)
-            test_name = data.get('test_name', 'web_tests.tests.SimpleGoogleTest')
-            
-            # Запускаем тесты через subprocess
-            result = subprocess.run(
-                ['python', 'manage.py', 'test', test_name, '--verbosity=2'],
-                capture_output=True,
-                text=True,
-                cwd='..'  # Путь к корню проекта
-            )
-            
+            data = json.loads(request.body.decode('utf-8'))
+            test_name = data.get('test_name', 'main.tests.SimpleGoogleTest')
+        except json.JSONDecodeError as e:
             return JsonResponse({
-                'success': True,
-                'stdout': result.stdout,
-                'stderr': result.stderr,
-                'returncode': result.returncode
-            })
-        except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
-    
-    return JsonResponse({'success': False, 'error': 'Method not allowed'})
+                'success': False,
+                'error': f'Ошибка парсинга JSON: {str(e)}',
+                'received_body': request.body.decode('utf-8')[:200]
+            }, status=400)
+        
+        # Путь к корню проекта (где manage.py)
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        
+        print(f"Project root: {project_root}")
+        print(f"Running test: {test_name}")
+        
+        # Запускаем тесты через subprocess
+        result = subprocess.run(
+            ['python', 'manage.py', 'test', test_name, '--verbosity=2'],
+            capture_output=True,
+            text=True,
+            cwd=project_root,
+            shell=True  # Добавляем shell=True для Windows
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'stdout': result.stdout,
+            'stderr': result.stderr,
+            'returncode': result.returncode
+        })
+        
+    except Exception as e:
+        traceback_str = traceback.format_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback_str
+        }, status=500)
 
-Шаг 6: Создаем шаблон для веб-интерфейса
-
-{# web_tests/templates/web_tests/dashboard.html #}
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Панель управления тестами</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
-        }
-        .test-card {
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 15px;
-            margin: 10px 0;
-            background: #fafafa;
-        }
-        .test-card h3 {
-            margin-top: 0;
-            color: #007bff;
-        }
-        button {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 5px;
-        }
-        button:hover {
-            background: #0056b3;
-        }
-        .output {
-            background: #1e1e1e;
-            color: #d4d4d4;
-            padding: 15px;
-            border-radius: 4px;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            overflow-x: auto;
-            margin-top: 20px;
-            max-height: 500px;
-            overflow-y: auto;
-        }
-        .success {
-            color: #28a745;
-        }
-        .error {
-            color: #dc3545;
-        }
-        .status {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 3px;
-            font-size: 12px;
-            margin-left: 10px;
-        }
-        .status.passed {
-            background: #28a745;
-            color: white;
-        }
-        .status.failed {
-            background: #dc3545;
-            color: white;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>🚀 Панель управления Selenium тестами</h1>
-        
-        <div class="test-card">
-            <h3>📊 Тест 1: Проверка статуса Google</h3>
-            <p>Проверяет, что Google.com возвращает HTTP статус 200</p>
-            <button onclick="runTest('web_tests.tests.SimpleGoogleTest.test_google_status_code')">
-                Запустить тест
-            </button>
-        </div>
-        
-        <div class="test-card">
-            <h3>🌐 Тест 2: Заголовок Google</h3>
-            <p>Проверяет, что заголовок страницы Google содержит "Google"</p>
-            <button onclick="runTest('web_tests.tests.SimpleGoogleTest.test_google_page_title')">
-                Запустить тест
-            </button>
-        </div>
-        
-        <div class="test-card">
-            <h3>🔍 Тест 3: Поле поиска Google</h3>
-            <p>Проверяет наличие поля поиска на странице Google</p>
-            <button onclick="runTest('web_tests.tests.SimpleGoogleTest.test_google_search_field')">
-                Запустить тест
-            </button>
-        </div>
-        
-        <div class="test-card">
-            <h3>🎯 Тест 4: Все тесты Google</h3>
-            <p>Запускает все тесты из SimpleGoogleTest</p>
-            <button onclick="runTest('web_tests.tests.SimpleGoogleTest')">
-                Запустить все тесты
-            </button>
-        </div>
-        
-        <div class="test-card">
-            <h3>🐍 Тест 5: С вашей фикстурой</h3>
-            <p>Использует вашу chrome_driver фикстуру</p>
-            <button onclick="runTest('web_tests.tests.TestGoogleWithPytest')">
-                Запустить с фикстурой
-            </button>
-        </div>
-        
-        <div id="output" class="output">
-            <span id="outputContent">Нажмите на кнопку, чтобы запустить тест...</span>
-        </div>
-    </div>
-    
-    <script>
-        async function runTest(testName) {
-            const outputDiv = document.getElementById('outputContent');
-            outputDiv.innerHTML = '🔄 Запуск теста ' + testName + '...<br>';
-            
-            try {
-                const response = await fetch('/run-tests/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ test_name: testName })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    outputDiv.innerHTML = '<span class="success">✅ Тест выполнен</span><br><br>' + 
-                                         '<strong>STDOUT:</strong><br>' + 
-                                         '<pre>' + result.stdout + '</pre><br>' +
-                                         '<strong>STDERR:</strong><br>' +
-                                         '<pre>' + result.stderr + '</pre>';
-                } else {
-                    outputDiv.innerHTML = '<span class="error">❌ Ошибка: ' + result.error + '</span>';
-                }
-            } catch (error) {
-                outputDiv.innerHTML = '<span class="error">❌ Ошибка запроса: ' + error + '</span>';
-            }
-        }
-    </script>
-</body>
-</html>
-
-Шаг 7: Настраиваем URL
-
-# web_tests/urls.py
+# D:/Autotests/testapp/main/urls.py
 from django.urls import path
 from . import views
 
-app_name = 'web_tests'
+app_name = 'main'
 
 urlpatterns = [
     path('', views.test_runner_dashboard, name='dashboard'),
     path('run-tests/', views.run_tests_api, name='run_tests'),
+    path('test/', views.test_api, name='test_api'),  # Добавляем для отладки
 ]
 
-# selenium_tests_project/urls.py
-from django.contrib import admin
-from django.urls import path, include
+# Добавьте эту функцию в main/views.py
+from django.http import HttpResponse
 
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('tests/', include('web_tests.urls')),  # Доступно по адресу /tests/
-]
+def test_api(request):
+    """Тестовый endpoint для проверки работы API"""
+    return JsonResponse({
+        'success': True,
+        'message': 'API работает!',
+        'method': request.method
+    })
+
+// Замените скрипт в dashboard.html на этот:
+<script>
+async function runTest(testName) {
+    const outputDiv = document.getElementById('outputContent');
+    outputDiv.innerHTML = '🔄 Запуск теста ' + testName + '...<br>';
+    
+    try {
+        const response = await fetch('/run-tests/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ test_name: testName })
+        });
+        
+        // Проверяем статус ответа
+        if (!response.ok) {
+            const text = await response.text();
+            outputDiv.innerHTML = `<span class="error">❌ HTTP ошибка ${response.status}: ${response.statusText}</span><br><br>
+                                   <strong>Ответ сервера:</strong><br>
+                                   <pre>${text.substring(0, 500)}</pre>`;
+            return;
+        }
+        
+        // Пробуем распарсить JSON
+        let result;
+        try {
+            result = await response.json();
+        } catch (e) {
+            const text = await response.text();
+            outputDiv.innerHTML = `<span class="error">❌ Ошибка парсинга JSON: ${e.message}</span><br><br>
+                                   <strong>Ответ сервера (первые 500 символов):</strong><br>
+                                   <pre>${text.substring(0, 500)}</pre>`;
+            return;
+        }
+        
+        if (result.success) {
+            outputDiv.innerHTML = '<span class="success">✅ Тест выполнен</span><br><br>' + 
+                                 '<strong>STDOUT:</strong><br>' + 
+                                 '<pre>' + escapeHtml(result.stdout) + '</pre><br>' +
+                                 '<strong>STDERR:</strong><br>' +
+                                 '<pre>' + escapeHtml(result.stderr) + '</pre><br>' +
+                                 '<strong>Return code:</strong> ' + result.returncode;
+        } else {
+            outputDiv.innerHTML = '<span class="error">❌ Ошибка: ' + escapeHtml(result.error) + '</span><br><br>' +
+                                 (result.traceback ? '<pre>' + escapeHtml(result.traceback) + '</pre>' : '');
+        }
+    } catch (error) {
+        outputDiv.innerHTML = '<span class="error">❌ Ошибка запроса: ' + error + '</span><br><br>' +
+                             '<strong>Проверьте:</strong><br>' +
+                             '1. Запущен ли сервер<br>' +
+                             '2. Правильный ли URL: /run-tests/<br>' +
+                             '3. Нет ли ошибок в консоли сервера';
+    }
+}
+
+// Функция для экранирования HTML
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+
