@@ -1,56 +1,336 @@
+#Базовый класс с общими настройками:
+# D:/Autotests/testapp/tests/base_test.py
+from django.test import LiveServerTestCase
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+import os
+
+
+class BaseSeleniumTest(LiveServerTestCase):
+    """
+    Базовый класс для всех Selenium тестов
+    Содержит общие настройки драйвера и вспомогательные методы
+    """
+    
+    @classmethod
+    def setUpClass(cls):
+        """Настройка драйвера - общая для всех систем"""
+        super().setUpClass()
+        
+        # Путь к драйверу
+        driver_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+            "chromedriver.exe"
+        )
+        
+        if not os.path.exists(driver_path):
+            raise FileNotFoundError(f"chromedriver.exe not found at {driver_path}")
+        
+        service = Service(executable_path=driver_path)
+        options = Options()
+        
+        # Общие опции для всех тестов
+        options.add_argument("--start-maximized")
+        options.add_argument("--disable-blink-features=AutomationControlled")
+        options.add_argument("--disable-web-security")
+        options.add_argument("--allow-running-insecure-content")
+        options.add_argument("--ignore-certificate-errors")
+        options.add_argument("--ignore-ssl-errors=yes")
+        options.add_experimental_option("excludeSwitches", ["enable-automation"])
+        
+        # User-agent для разных систем (можно переопределить в наследниках)
+        if hasattr(cls, 'USER_AGENT'):
+            options.add_argument(f"user-agent={cls.USER_AGENT}")
+        
+        cls.driver = webdriver.Chrome(service=service, options=options)
+        cls.driver.set_page_load_timeout(30)
+        cls.driver.implicitly_wait(10)
+        
+        # Удаление признаков автоматизации
+        cls.driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+            'source': '''
+            delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+            delete window.cdc_adoQpoasnfa76pfcZLmcfl_Object;
+            delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+            delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+            '''
+        })
+        
+        cls.wait = WebDriverWait(cls.driver, 15)
+    
+    @classmethod
+    def tearDownClass(cls):
+        """Закрытие браузера"""
+        print(f"\nClosing browser for {cls.__name__}...")
+        cls.driver.quit()
+        super().tearDownClass()
+    
+    def setUp(self):
+        """Подготовка перед каждым тестом"""
+        print(f"\n--- Starting test: {self._testMethodName} ---")
+    
+    def tearDown(self):
+        """Очистка после каждого теста"""
+        print(f"--- Finished test: {self._testMethodName} ---")
+        # Делаем скриншот при падении
+        if hasattr(self, '_outcome') and self._outcome.errors:
+            screenshot_path = f"screenshots/{self._testMethodName}_{self.__class__.__name__}.png"
+            os.makedirs("screenshots", exist_ok=True)
+            self.driver.save_screenshot(screenshot_path)
+            print(f"Screenshot saved: {screenshot_path}")
+    
+    def login(self, username, password, login_url):
+        """Общий метод авторизации"""
+        self.driver.get(login_url)
+        # Общая логика авторизации
+        pass
+__________________________________________
+
+#Тесты для системы 1 kред
+# D:/Autotests/testapp/tests/system_1_credit_register/tests.py
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+from tests.base_test import BaseSeleniumTest
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+import time
+
+
+class CreditRegisterTests(BaseSeleniumTest):
+    """
+    Тесты для системы "Кредитный регистр"
+    """
+    
+    # Системные настройки (можно переопределить)
+    SYSTEM_NAME = "Кредитный регистр"
+    BASE_PATH = "/"  # Путь к системе в Django
+    
+    @classmethod
+    def setUpClass(cls):
+        """Специфичные настройки для кредитного регистра"""
+        super().setUpClass()
+        # Можно добавить специфичные опции для этой системы
+        # Например, другой user-agent
+        # cls.USER_AGENT = "Custom UA for Credit Register"
+    
+    def test_credit_register_basic(self):
+        """Оригинальный тест кредитного регистра"""
+        # Открываем страницу
+        self.driver.get(f"{self.live_server_url}{self.BASE_PATH}")
+        time.sleep(2)
+        
+        # Проверка заголовка
+        assert "Кредитный регистр" in self.driver.title
+        print(f"Заголовок: {self.driver.title}")
+        
+        # Проверка текста на странице
+        assert "Кредитная история" in self.driver.page_source
+        print("Текст 'Кредитная история' найден")
+        
+        # Переход в личный кабинет
+        personal_link = self.driver.find_element(
+            By.XPATH, 
+            "//a[contains(text(), 'Личный кабинет') or @href='/Authenticate']"
+        )
+        personal_link.click()
+        time.sleep(2)
+        
+        assert "/Authenticate" in self.driver.current_url
+        print(f"Перешли на: {self.driver.current_url}")
+    
+    def test_credit_register_navigation(self):
+        """Тест навигации по кредитному регистру"""
+        self.driver.get(f"{self.live_server_url}{self.BASE_PATH}")
+        
+        # Проверяем все ссылки
+        links = self.driver.find_elements(By.TAG_NAME, "a")
+        assert len(links) > 0, "Нет ссылок на странице"
+        print(f"Найдено {len(links)} ссылок")
+
+
+class CreditRegisterAuthTests(BaseSeleniumTest):
+    """Тесты авторизации для кредитного регистра"""
+    
+    def test_legal_auth_page(self):
+        """Тест страницы авторизации юрлица"""
+        self.driver.get(f"{self.live_server_url}/AuthenticateLegal")
+        
+        assert "Вход через USBToken" in self.driver.page_source
+        print("Страница авторизации юрлица открыта")
+    
+    def test_usb_token_redirect(self):
+        """Тест перехода на USBToken"""
+        self.driver.get(f"{self.live_server_url}/AuthenticateLegal")
+        
+        usb_link = self.wait.until(
+            EC.element_to_be_clickable((By.ID, "avest-legal-usb-url"))
+        )
+        usb_link.click()
+        time.sleep(3)
+        
+        current_url = self.driver.current_url
+        assert any(word in current_url.lower() for word in ["oauth", "avest"])
+        print(f"Переход на OAuth: {current_url}")
+
+______________________________
+
+#Тесты для системы 2 (Новая система):
+# D:/Autotests/testapp/tests/system_2_new_system/tests.py
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+from tests.base_test import BaseSeleniumTest
+from selenium.webdriver.common.by import By
+
+
+class NewSystemTests(BaseSeleniumTest):
+    """
+    Тесты для новой системы
+    """
+    
+    SYSTEM_NAME = "Новая платежная система"
+    BASE_PATH = "/payments/"
+    
+    def test_payment_page_load(self):
+        """Тест загрузки страницы платежей"""
+        self.driver.get(f"{self.live_server_url}{self.BASE_PATH}")
+        
+        assert "Платежи" in self.driver.title or "Payments" in self.driver.title
+        print(f"Страница платежей загружена: {self.driver.title}")
+    
+    def test_payment_form_validation(self):
+        """Тест валидации формы платежа"""
+        self.driver.get(f"{self.live_server_url}{self.BASE_PATH}")
+        
+        # Находим форму
+        amount_field = self.driver.find_element(By.ID, "amount")
+        amount_field.send_keys("100")
+        
+        card_field = self.driver.find_element(By.ID, "card_number")
+        card_field.send_keys("1234567890123456")
+        
+        submit_btn = self.driver.find_element(By.XPATH, "//button[@type='submit']")
+        submit_btn.click()
+        
+        # Проверяем результат
+        self.wait.until(
+            EC.presence_of_element_located((By.CLASS_NAME, "success-message"))
+        )
+        print("Форма платежа успешно отправлена")
+
+
+class NewSystemAPITests(BaseSeleniumTest):
+    """API тесты для новой системы"""
+    
+    def test_api_endpoint(self):
+        """Тест API endpoint"""
+        # Можно использовать requests вместо Selenium
+        import requests
+        response = requests.get(f"{self.live_server_url}/api/payments/")
+        assert response.status_code == 200
+
+_____________________________
+
+#Конфигурация систем:
+# D:/Autotests/testapp/tests/system_1_credit_register/config.py
+CREDIT_REGISTER_CONFIG = {
+    'name': 'Кредитный регистр',
+    'description': 'Тестирование кредитного регистра и авторизации',
+    'base_url': '/',
+    'test_classes': [
+        'CreditRegisterTests',
+        'CreditRegisterAuthTests'
+    ],
+    'timeout': 30,
+    'retry_count': 2
+}
+
+# D:/Autotests/testapp/tests/system_2_new_system/config.py
+NEW_SYSTEM_CONFIG = {
+    'name': 'Платежная система',
+    'description': 'Тестирование платежей и API',
+    'base_url': '/payments/',
+    'test_classes': [
+        'NewSystemTests',
+        'NewSystemAPITests'
+    ],
+    'timeout': 20,
+    'retry_count': 1
+}
+
+________________________
+
+#Обновленный views.py для выбора системы:
 # D:/Autotests/testapp/main/views.py
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-import subprocess
 import json
-import os
+import importlib
 import traceback
+import sys
+import os
+
+
+# Список доступных систем
+SYSTEMS = {
+    'credit_register': {
+        'name': 'Кредитный регистр',
+        'description': 'Тесты для кредитного регистра и авторизации',
+        'module_path': 'tests.system_1_credit_register.tests',
+        'test_classes': ['CreditRegisterTests', 'CreditRegisterAuthTests'],
+        'color': 'blue'
+    },
+    'payment_system': {
+        'name': 'Платежная система',
+        'description': 'Тесты для платежей и транзакций',
+        'module_path': 'tests.system_2_new_system.tests',
+        'test_classes': ['NewSystemTests', 'NewSystemAPITests'],
+        'color': 'green'
+    },
+    'all': {
+        'name': 'Все системы',
+        'description': 'Запустить все тесты всех систем',
+        'module_path': None,
+        'test_classes': None,
+        'color': 'purple'
+    }
+}
 
 
 def test_runner_dashboard(request):
-    """Дашборд для запуска тестов"""
-    return render(request, 'main/dashboard.html')
+    """Дашборд для запуска тестов с выбором системы"""
+    return render(request, 'main/dashboard.html', {'systems': SYSTEMS})
 
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def run_tests_api(request):
-    """API для запуска тестов"""
+    """API для запуска тестов выбранной системы"""
     try:
-        # Пробуем распарсить JSON
-        try:
-            data = json.loads(request.body.decode('utf-8'))
-            test_name = data.get('test_name', 'main.tests.SimpleGoogleTest')
-        except json.JSONDecodeError as e:
-            return JsonResponse({
-                'success': False,
-                'error': f'Ошибка парсинга JSON: {str(e)}',
-                'received_body': request.body.decode('utf-8')[:200]
-            }, status=400)
+        data = json.loads(request.body.decode('utf-8'))
+        system_key = data.get('system', '')
+        test_class = data.get('test_class', '')
         
-        # Путь к корню проекта (где manage.py)
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if system_key not in SYSTEMS:
+            return JsonResponse({'success': False, 'error': 'Неизвестная система'}, status=400)
         
-        print(f"Project root: {project_root}")
-        print(f"Running test: {test_name}")
+        system = SYSTEMS[system_key]
         
-        # Запускаем тесты через subprocess
-        result = subprocess.run(
-            ['python', 'manage.py', 'test', test_name, '--verbosity=2'],
-            capture_output=True,
-            text=True,
-            cwd=project_root,
-            shell=True  # Добавляем shell=True для Windows
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'stdout': result.stdout,
-            'stderr': result.stderr,
-            'returncode': result.returncode
-        })
+        if system_key == 'all':
+            # Запускаем все тесты всех систем
+            results = run_all_systems_tests()
+            return JsonResponse(results)
+        else:
+            # Запускаем тесты конкретной системы
+            result = run_system_tests(system['module_path'], test_class)
+            return JsonResponse(result)
         
     except Exception as e:
         traceback_str = traceback.format_exc()
@@ -60,6 +340,247 @@ def run_tests_api(request):
             'traceback': traceback_str
         }, status=500)
 
+
+def run_system_tests(module_path, specific_test_class=None):
+    """Запуск тестов для конкретной системы"""
+    try:
+        # Импортируем модуль с тестами
+        test_module = importlib.import_module(module_path)
+        
+        # Загружаем тесты
+        import unittest
+        from django.test import TestCase
+        
+        suite = unittest.TestSuite()
+        
+        if specific_test_class:
+            # Запускаем конкретный тестовый класс
+            test_class = getattr(test_module, specific_test_class)
+            suite.addTests(unittest.TestLoader().loadTestsFromTestCase(test_class))
+        else:
+            # Запускаем все тесты в модуле
+            for name in dir(test_module):
+                obj = getattr(test_module, name)
+                if isinstance(obj, type) and issubclass(obj, TestCase):
+                    suite.addTests(unittest.TestLoader().loadTestsFromTestCase(obj))
+        
+        # Запускаем тесты
+        from django.test.utils import get_runner
+        from django.conf import settings
+        
+        runner = get_runner(settings)()
+        result = runner.run(suite)
+        
+        # Формируем отчет
+        return {
+            'success': result.wasSuccessful(),
+            'tests_run': result.testsRun,
+            'failures': len(result.failures),
+            'errors': len(result.errors),
+            'details': {
+                'failures': [(str(f[0]), str(f[1])) for f in result.failures],
+                'errors': [(str(e[0]), str(e[1])) for e in result.errors]
+            }
+        }
+        
+    except Exception as e:
+        return {
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }
+
+
+def run_all_systems_tests():
+    """Запуск тестов всех систем"""
+    results = {}
+    all_success = True
+    
+    for system_key, system in SYSTEMS.items():
+        if system_key != 'all':
+            print(f"\n=== Запуск тестов: {system['name']} ===")
+            result = run_system_tests(system['module_path'])
+            results[system_key] = result
+            if not result.get('success', False):
+                all_success = False
+    
+    return {
+        'success': all_success,
+        'systems_results': results
+    }
+
+_____________________
+
+#Обновленный dashboard.html с вкладками:
+{# D:/Autotests/testapp/main/templates/main/dashboard.html #}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Панель управления тестами</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1400px; margin: 20px auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
+        
+        /* Вкладки */
+        .tabs { display: flex; background: #f8f9fa; border-bottom: 2px solid #dee2e6; }
+        .tab { padding: 15px 25px; cursor: pointer; border: none; background: none; font-size: 16px; transition: all 0.3s; }
+        .tab:hover { background: #e9ecef; }
+        .tab.active { background: white; border-bottom: 2px solid #007bff; color: #007bff; font-weight: bold; }
+        
+        /* Контент вкладок */
+        .tab-content { display: none; padding: 20px; }
+        .tab-content.active { display: block; }
+        
+        /* Тесты */
+        .test-card { border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0; background: #fafafa; cursor: pointer; transition: all 0.3s; }
+        .test-card:hover { background: #e9ecef; transform: translateX(5px); }
+        .test-card h3 { margin: 0 0 10px 0; color: #007bff; }
+        .test-card p { margin: 0; color: #666; font-size: 14px; }
+        
+        .status { display: inline-block; padding: 3px 8px; border-radius: 3px; font-size: 12px; margin-top: 10px; }
+        .status.passed { background: #28a745; color: white; }
+        .status.failed { background: #dc3545; color: white; }
+        .status.running { background: #ffc107; color: #333; }
+        
+        .run-all-btn { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-bottom: 20px; }
+        .output { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 500px; overflow: auto; margin-top: 20px; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .loading { display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; margin-left: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('credit_register')">🏦 Кредитный регистр</button>
+        <button class="tab" onclick="switchTab('payment_system')">💳 Платежная система</button>
+        <button class="tab" onclick="switchTab('all_systems')">🎯 Все системы</button>
+    </div>
+    
+    <div id="credit_register" class="tab-content active">
+        <button class="run-all-btn" onclick="runSystemTests('credit_register')">▶️ Запустить все тесты кредитного регистра</button>
+        <div class="test-card" onclick="runTestClass('credit_register', 'CreditRegisterTests')">
+            <h3>📊 Базовые тесты кредитного регистра</h3>
+            <p>Проверка заголовка, навигации, основных функций</p>
+            <div id="status-CreditRegisterTests" class="status">Не запущен</div>
+        </div>
+        <div class="test-card" onclick="runTestClass('credit_register', 'CreditRegisterAuthTests')">
+            <h3>🔐 Тесты авторизации</h3>
+            <p>Проверка входа через USBToken и OAuth</p>
+            <div id="status-CreditRegisterAuthTests" class="status">Не запущен</div>
+        </div>
+    </div>
+    
+    <div id="payment_system" class="tab-content">
+        <button class="run-all-btn" onclick="runSystemTests('payment_system')">▶️ Запустить все тесты платежной системы</button>
+        <div class="test-card" onclick="runTestClass('payment_system', 'NewSystemTests')">
+            <h3>💰 Тесты платежей</h3>
+            <p>Проверка формы платежа и валидации</p>
+            <div id="status-NewSystemTests" class="status">Не запущен</div>
+        </div>
+        <div class="test-card" onclick="runTestClass('payment_system', 'NewSystemAPITests')">
+            <h3>🔌 API тесты</h3>
+            <p>Проверка API эндпоинтов</p>
+            <div id="status-NewSystemAPITests" class="status">Не запущен</div>
+        </div>
+    </div>
+    
+    <div id="all_systems" class="tab-content">
+        <button class="run-all-btn" onclick="runAllSystems()">▶️ Запустить ВСЕ тесты ВСЕХ систем</button>
+        <div id="all-systems-status"></div>
+    </div>
+    
+    <div id="output" class="output">Нажмите на тест для запуска...</div>
+</div>
+
+<script>
+let currentRunning = null;
+
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    event.target.classList.add('active');
+}
+
+async function runTestClass(system, testClass) {
+    if (currentRunning) { alert('Тест уже выполняется'); return; }
+    
+    currentRunning = testClass;
+    updateStatus(testClass, 'running', 'Выполняется...');
+    document.getElementById('output').innerHTML = `🔄 Запуск ${testClass}...<div class="loading"></div>`;
+    
+    try {
+        const response = await fetch('/run-tests/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ system: system, test_class: testClass })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            updateStatus(testClass, 'passed', `Пройден (${result.tests_run} тестов)`);
+            document.getElementById('output').innerHTML = `<span class="success">✅ ТЕСТЫ ПРОЙДЕНЫ</span><br>Выполнено: ${result.tests_run}<br>Ошибок: ${result.errors}<br>Падений: ${result.failures}`;
+        } else {
+            updateStatus(testClass, 'failed', 'Провален');
+            document.getElementById('output').innerHTML = `<span class="error">❌ ТЕСТЫ ПРОВАЛЕНЫ</span><br>${result.error || ''}`;
+        }
+    } catch (error) {
+        updateStatus(testClass, 'failed', 'Ошибка');
+        document.getElementById('output').innerHTML = `<span class="error">Ошибка: ${error}</span>`;
+    } finally { currentRunning = null; }
+}
+
+async function runSystemTests(system) {
+    if (currentRunning) { alert('Тест уже выполняется'); return; }
+    currentRunning = system;
+    document.getElementById('output').innerHTML = `🔄 Запуск системы ${system}...<div class="loading"></div>`;
+    
+    try {
+        const response = await fetch('/run-tests/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ system: system })
+        });
+        const result = await response.json();
+        document.getElementById('output').innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+    } catch (error) {
+        document.getElementById('output').innerHTML = `<span class="error">Ошибка: ${error}</span>`;
+    } finally { currentRunning = null; }
+}
+
+async function runAllSystems() {
+    if (currentRunning) { alert('Тест уже выполняется'); return; }
+    currentRunning = 'all';
+    document.getElementById('output').innerHTML = `🔄 Запуск всех систем...<div class="loading"></div>`;
+    
+    try {
+        const response = await fetch('/run-tests/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ system: 'all' })
+        });
+        const result = await response.json();
+        document.getElementById('output').innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+    } catch (error) {
+        document.getElementById('output').innerHTML = `<span class="error">Ошибка: ${error}</span>`;
+    } finally { currentRunning = null; }
+}
+
+function updateStatus(testId, status, message) {
+    const el = document.getElementById(`status-${testId}`);
+    if (el) { el.className = `status ${status}`; el.textContent = message; }
+}
+</script>
+</body>
+</html>
+
+______________________
+
+#Обновленный urls.py:
 # D:/Autotests/testapp/main/urls.py
 from django.urls import path
 from . import views
@@ -69,82 +590,4 @@ app_name = 'main'
 urlpatterns = [
     path('', views.test_runner_dashboard, name='dashboard'),
     path('run-tests/', views.run_tests_api, name='run_tests'),
-    path('test/', views.test_api, name='test_api'),  # Добавляем для отладки
 ]
-
-# Добавьте эту функцию в main/views.py
-from django.http import HttpResponse
-
-def test_api(request):
-    """Тестовый endpoint для проверки работы API"""
-    return JsonResponse({
-        'success': True,
-        'message': 'API работает!',
-        'method': request.method
-    })
-
-// Замените скрипт в dashboard.html на этот:
-<script>
-async function runTest(testName) {
-    const outputDiv = document.getElementById('outputContent');
-    outputDiv.innerHTML = '🔄 Запуск теста ' + testName + '...<br>';
-    
-    try {
-        const response = await fetch('/run-tests/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ test_name: testName })
-        });
-        
-        // Проверяем статус ответа
-        if (!response.ok) {
-            const text = await response.text();
-            outputDiv.innerHTML = `<span class="error">❌ HTTP ошибка ${response.status}: ${response.statusText}</span><br><br>
-                                   <strong>Ответ сервера:</strong><br>
-                                   <pre>${text.substring(0, 500)}</pre>`;
-            return;
-        }
-        
-        // Пробуем распарсить JSON
-        let result;
-        try {
-            result = await response.json();
-        } catch (e) {
-            const text = await response.text();
-            outputDiv.innerHTML = `<span class="error">❌ Ошибка парсинга JSON: ${e.message}</span><br><br>
-                                   <strong>Ответ сервера (первые 500 символов):</strong><br>
-                                   <pre>${text.substring(0, 500)}</pre>`;
-            return;
-        }
-        
-        if (result.success) {
-            outputDiv.innerHTML = '<span class="success">✅ Тест выполнен</span><br><br>' + 
-                                 '<strong>STDOUT:</strong><br>' + 
-                                 '<pre>' + escapeHtml(result.stdout) + '</pre><br>' +
-                                 '<strong>STDERR:</strong><br>' +
-                                 '<pre>' + escapeHtml(result.stderr) + '</pre><br>' +
-                                 '<strong>Return code:</strong> ' + result.returncode;
-        } else {
-            outputDiv.innerHTML = '<span class="error">❌ Ошибка: ' + escapeHtml(result.error) + '</span><br><br>' +
-                                 (result.traceback ? '<pre>' + escapeHtml(result.traceback) + '</pre>' : '');
-        }
-    } catch (error) {
-        outputDiv.innerHTML = '<span class="error">❌ Ошибка запроса: ' + error + '</span><br><br>' +
-                             '<strong>Проверьте:</strong><br>' +
-                             '1. Запущен ли сервер<br>' +
-                             '2. Правильный ли URL: /run-tests/<br>' +
-                             '3. Нет ли ошибок в консоли сервера';
-    }
-}
-
-// Функция для экранирования HTML
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-</script>
-
