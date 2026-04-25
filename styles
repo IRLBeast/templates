@@ -69,91 +69,78 @@ def test_credit_register_basic(chrome_driver):
     chrome_driver.get("http://q-web-open/")
     time.sleep(5)
     
-    assert "РљСЂРµРґРёС‚РЅС‹Р№ СЂРµРіРёСЃС‚СЂ" in chrome_driver.title
-    print(f"Р—Р°РіРѕР»РѕРІРѕРє: {chrome_driver.title}")
+    assert "kred" in chrome_driver.title
+    print(f"title is: {chrome_driver.title}")
     
-    try:
-        assert "РљСЂРµРґРёС‚РЅР°СЏ РёСЃС‚РѕСЂРёСЏ" in chrome_driver.page_source
-        print("РўРµРєСЃС‚ 'РљСЂРµРґРёС‚РЅР°СЏ РёСЃС‚РѕСЂРёСЏ' РЅР°Р№РґРµРЅ РЅР° СЃС‚СЂР°РЅРёС†Рµ")
-    except AssertionError:
-        print("РљСЂРµРґРёС‚РЅР°СЏ РёСЃС‚РѕСЂРёСЏ' РЅРµ РЅР°Р№РґРµРЅ РЅР° СЃС‚СЂР°РЅРёС†Рµ")
-        raise
-    
-    personal_link = chrome_driver.find_element(By.XPATH, "//a[contains(text(), 'Р›РёС‡РЅС‹Р№ РєР°Р±РёРЅРµС‚') or @href='/Authenticate']")
+    personal_link = chrome_driver.find_element(By.XPATH, "//a[contains(text(), 'Cabinet') or @href='/Authenticate']")
     personal_link.click()
     time.sleep(3)
 
     assert "/Authenticate" in chrome_driver.current_url
-    print(f"РџРµСЂРµС€Р»Рё РЅР°: {chrome_driver.current_url}")
+    print(f"went: {chrome_driver.current_url}")
 
-    personal_link = chrome_driver.find_element(By.XPATH, "//a[contains(text(), 'Р›РёС‡РЅС‹Р№ РєР°Р±РёРЅРµС‚') or @href='/AuthenticateLegal']")
+    personal_link = chrome_driver.find_element(By.XPATH, "//a[contains(text(), 'Cabinet') or @href='/AuthenticateLegal']")
     personal_link.click()
     time.sleep(3)
     
     assert "/AuthenticateLegal" in chrome_driver.current_url
-    print(f"РџРµСЂРµС€Р»Рё РЅР°: {chrome_driver.current_url}")
+    print(f"went: {chrome_driver.current_url}")
 
     try:
-        assert "Р’С…РѕРґ С‡РµСЂРµР· USBToken" in chrome_driver.page_source
-        print("РўРµРєСЃС‚ 'Р’С…РѕРґ С‡РµСЂРµР· USBToken' РЅР°Р№РґРµРЅ РЅР° СЃС‚СЂР°РЅРёС†Рµ")
+        assert "USBToken" in chrome_driver.page_source
+        print("USBToken")
     except AssertionError:
-        print("РўРµРєСЃС‚ 'Р’С…РѕРґ С‡РµСЂРµР· USBToken' РЅРµ РЅР°Р№РґРµРЅ РЅР° СЃС‚СЂР°РЅРёС†Рµ")
+        print("USBToken' found")
         raise
 
-    print("\nРџРµСЂРµС…РѕРґ РЅР° Р°РІС‚РѕСЂРёР·Р°С†РёСЋ С‡РµСЂРµР· USBToken")
+    print("\nUSBToken")
     
     try:
         usb_token_link = wait.until(
             EC.element_to_be_clickable((By.ID, "avest-legal-usb-url"))
         )
-        print(f"РќР°Р№РґРµРЅР° СЃСЃС‹Р»РєР° USBToken СЃ ID 'avest-legal-usb-url'")
-        print(f"URL СЃСЃС‹Р»РєРё: {usb_token_link.get_attribute('href')}")
+        print(f"URL: {usb_token_link.get_attribute('href')}")
         
         usb_token_link.click()
-        print("РљР»РёРєРЅСѓР»Рё РЅР° СЃСЃС‹Р»РєСѓ USBToken")
+        print("USBToken")
         
         time.sleep(5)
 
-        
         current_url = chrome_driver.current_url
-        print(f"РўРµРєСѓС‰РёР№ URL РїРѕСЃР»Рµ РїРµСЂРµС…РѕРґР°: {current_url}")
+        print(f"current URL: {current_url}")
         
-        assert current_url != "http://q-web-open/AuthenticateLegal", "URL РЅРµ РёР·РјРµРЅРёР»СЃСЏ РїРѕСЃР»Рµ РєР»РёРєР°"
+        assert current_url != "http://q-web-open/AuthenticateLegal", "not changed"
         
         if "oauth/authorize" in current_url or "avest" in current_url.lower():
-            print("РЈСЃРїРµС€РЅС‹Р№ РїРµСЂРµС…РѕРґ РЅР° OAuth СЃС‚СЂР°РЅРёС†Сѓ Р°РІС‚РѕСЂРёР·Р°С†РёРё")
+            print("succ OAuth")
         else:
-            print(f"РџРµСЂРµС€Р»Рё РЅР°: {current_url}")
+            print(f"went: {current_url}")
             
     except Exception as e:
-        print(f"РћС€РёР±РєР° РїСЂРё РїРѕРёСЃРєРµ РїРѕ ID: {e}")
+        print(f"err: {e}")
 
     try:
-        assert "РўРµСЃС‚ СЃРёСЃС‚РµРјР°" in chrome_driver.page_source
-        print("РўРµРєСЃС‚ 'РўРµСЃС‚ СЃРёСЃС‚РµРјР°' РЅР°Р№РґРµРЅ РЅР° СЃС‚СЂР°РЅРёС†Рµ")
+        assert "Test" in chrome_driver.page_source
+        print("text")
     except AssertionError:
-        print("РўРµРєСЃС‚ 'РўРµСЃС‚ СЃРёСЃС‚РµРјР°' РЅРµ РЅР°Р№РґРµРЅ РЅР° СЃС‚СЂР°РЅРёС†Рµ")
+        print("text")
         raise
 
     cert_input = chrome_driver.find_element(By.ID, "serialnum")
     cert_input.send_keys("20084965288178895105415972429")
     certificate_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@type='submit']")))
     certificate_button.click()
-    print("РќР°Р¶Р°Р»Рё РЅР° РєРЅРѕРїРєСѓ 'Р’С‹Р±СЂР°С‚СЊ СЃРµСЂС‚РёС„РёРєР°С‚' РїРѕ Р·РЅР°С‡РµРЅРёСЋ")
     time.sleep(3)
-
-    #submit_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@type='submit']")))
-    #submit_button.click()
 
     submit_button = chrome_driver.find_element(By.CSS_SELECTOR, "input[type='submit']")
     submit_button.click()
     time.sleep(3)
 
     try:
-        assert "РџРѕР»СѓС‡РёС‚СЊ РєСЂРµРґРёС‚РЅС‹Р№ РѕС‚С‡РµС‚" in chrome_driver.page_source
-        print("РўРµРєСЃС‚ 'РџРѕР»СѓС‡РёС‚СЊ РєСЂРµРґРёС‚РЅС‹Р№ РѕС‚С‡РµС‚' РЅР°Р№РґРµРЅ РЅР° СЃС‚СЂР°РЅРёС†Рµ")
+        assert "Get report" in chrome_driver.page_source
+        print("text")
     except AssertionError:
-        print("РўРµРєСЃС‚ 'РџРѕР»СѓС‡РёС‚СЊ РєСЂРµРґРёС‚РЅС‹Р№ РѕС‚С‡РµС‚' РЅРµ РЅР°Р№РґРµРЅ РЅР° СЃС‚СЂР°РЅРёС†Рµ")
+        print("text")
         raise
 
     logout_link = chrome_driver.find_element(By.XPATH, "//a[contains(text(), 'Р’С‹С…РѕРґ') or @href='/AuthenticateLegal/SignOut']")
@@ -161,14 +148,14 @@ def test_credit_register_basic(chrome_driver):
     time.sleep(3)
 
     try:
-        assert "РљСЂРµРґРёС‚РЅР°СЏ РёСЃС‚РѕСЂРёСЏ" in chrome_driver.page_source
-        print("РўРµРєСЃС‚ 'РљСЂРµРґРёС‚РЅР°СЏ РёСЃС‚РѕСЂРёСЏ' РЅР°Р№РґРµРЅ РЅР° СЃС‚СЂР°РЅРёС†Рµ")
+        assert "hist" in chrome_driver.page_source
+        print("text 'hist' found")
     except AssertionError:
-        print("РљСЂРµРґРёС‚РЅР°СЏ РёСЃС‚РѕСЂРёСЏ' РЅРµ РЅР°Р№РґРµРЅ РЅР° СЃС‚СЂР°РЅРёС†Рµ")
+        print("Text' not found")
         raise
 
     
-    print("РўРµСЃС‚ Р·Р°РІРµСЂС€РµРЅ СѓСЃРїРµС€РЅРѕ!")
+    print("Success!")
 
 
 #mainpage.html
@@ -176,7 +163,7 @@ def test_credit_register_basic(chrome_driver):
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>РџР°РЅРµР»СЊ СѓРїСЂР°РІР»РµРЅРёСЏ С‚РµСЃС‚Р°РјРё</title>
+    <title>Control panel</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f5f5f5; }
@@ -214,45 +201,45 @@ def test_credit_register_basic(chrome_driver):
 <body>
 <div class="container">
     <div class="tabs">
-        <button class="tab active" onclick="switchTab('credit_register')">РљСЂРµРґРёС‚РЅС‹Р№ СЂРµРіРёСЃС‚СЂ</button>
-        <button class="tab" onclick="switchTab('payment_system')">РџР»Р°С‚РµР¶РЅР°СЏ СЃРёСЃС‚РµРјР°</button>
-        <button class="tab" onclick="switchTab('all_systems')">Р’СЃРµ СЃРёСЃС‚РµРјС‹</button>
+        <button class="tab active" onclick="switchTab('credit_register')">Kredit syst</button>
+        <button class="tab" onclick="switchTab('payment_system')">System 2</button>
+        <button class="tab" onclick="switchTab('all_systems')">All syst</button>
     </div>
 
     <div id="credit_register" class="tab-content active">
-        <button class="run-all-btn" onclick="runSystemTests('credit_register')">Р—Р°РїСѓСЃС‚РёС‚СЊ РІСЃРµ С‚РµСЃС‚С‹ РєСЂРµРґРёС‚РЅРѕРіРѕ СЂРµРіРёСЃС‚СЂР°</button>
+        <button class="run-all-btn" onclick="runSystemTests('credit_register')">Run all kred</button>
         <div class="test-card" onclick="runTestClass('credit_register', 'CreditRegisterTests')">
-            <h3>Basic tests</h3>
-            <p>Some func</p>
-            <div id="status-CreditRegisterTests" class="status">РќРµ Р·Р°РїСѓС‰РµРЅ</div>
+            <h3>Basic kr</h3>
+            <p>Checking</p>
+            <div id="status-CreditRegisterTests" class="status">Not running</div>
         </div>
         <div class="test-card" onclick="runTestClass('credit_register', 'CreditRegisterAuthTests')">
-            <h3>Auth tests</h3>
+            <h3>Auth test</h3>
             <p>USBToken and OAuth</p>
             <div id="status-CreditRegisterAuthTests" class="status">Not running</div>
         </div>
     </div>
 
     <div id="payment_system" class="tab-content">
-        <button class="run-all-btn" onclick="runSystemTests('payment_system')">run tests</button>
+        <button class="run-all-btn" onclick="runSystemTests('payment_system')">Run all for sys 2</button>
         <div class="test-card" onclick="runTestClass('payment_system', 'NewSystemTests')">
-            <h3>РўРµСЃС‚С‹ РїР»Р°С‚РµР¶РµР№</h3>
-            <p>РџСЂРѕРІРµСЂРєР° С„РѕСЂРјС‹ РїР»Р°С‚РµР¶Р° Рё РІР°Р»РёРґР°С†РёРё</p>
-            <div id="status-NewSystemTests" class="status">РќРµ Р·Р°РїСѓС‰РµРЅ</div>
+            <h3>Tests</h3>
+            <p>Some checks</p>
+            <div id="status-NewSystemTests" class="status">Not running</div>
         </div>
         <div class="test-card" onclick="runTestClass('payment_system', 'NewSystemAPITests')">
-            <h3>API С‚РµСЃС‚С‹</h3>
-            <p>РџСЂРѕРІРµСЂРєР° API СЌРЅРґРїРѕРёРЅС‚РѕРІ</p>
-            <div id="status-NewSystemAPITests" class="status">РќРµ Р·Р°РїСѓС‰РµРЅ</div>
+            <h3>API tests</h3>
+            <p>API</p>
+            <div id="status-NewSystemAPITests" class="status">Not running</div>
         </div>
     </div>
 
     <div id="all_systems" class="tab-content">
-        <button class="run-all-btn" onclick="runAllSystems()">Р—Р°РїСѓСЃС‚РёС‚СЊ Р’РЎР• С‚РµСЃС‚С‹ Р’РЎР•РҐ СЃРёСЃС‚РµРј</button>
+        <button class="run-all-btn" onclick="runAllSystems()">Run everything</button>
         <div id="all-systems-status"></div>
     </div>
 
-    <div id="output" class="output">РќР°Р¶РјРёС‚Рµ РЅР° С‚РµСЃС‚ РґР»СЏ Р·Р°РїСѓСЃРєР°...</div>
+    <div id="output" class="output">Press on button...</div>
 </div>
 
 <script>
@@ -266,11 +253,11 @@ function switchTab(tabId) {
 }
 
 async function runTestClass(system, testClass) {
-    if (currentRunning) { alert('РўРµСЃС‚ СѓР¶Рµ РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ'); return; }
+    if (currentRunning) { alert('Test already running'); return; }
 
     currentRunning = testClass;
-    updateStatus(testClass, 'running', 'Р’С‹РїРѕР»РЅСЏРµС‚СЃСЏ...');
-    document.getElementById('output').innerHTML = `Р—Р°РїСѓСЃРє ${testClass}...<div class="loading"></div>`;
+    updateStatus(testClass, 'running', 'Running...');
+    document.getElementById('output').innerHTML = `Start ${testClass}...<div class="loading"></div>`;
 
     try {
         const response = await fetch('/run-tests/', {
@@ -281,11 +268,11 @@ async function runTestClass(system, testClass) {
         const result = await response.json();
 
         if (result.success) {
-            updateStatus(testClass, 'passed', `РџСЂРѕР№РґРµРЅ (${result.tests_run} С‚РµСЃС‚РѕРІ)`);
-            document.getElementById('output').innerHTML = `<span class="success">Test passed</span><br>Р’С‹РїРѕР»РЅРµРЅРѕ: ${result.tests_run}<br>РћС€РёР±РѕРє: ${result.errors}<br>РџР°РґРµРЅРёР№: ${result.failures}`;
+            updateStatus(testClass, 'passed', `Passed (${result.tests_run} С‚РµСЃС‚РѕРІ)`);
+            document.getElementById('output').innerHTML = `<span class="success">Passed</span><br>Succeded: ${result.tests_run}<br>Errors: ${result.errors}<br>fallings: ${result.failures}`;
         } else {
-            updateStatus(testClass, 'failed', 'РџСЂРѕРІР°Р»РµРЅ');
-            document.getElementById('output').innerHTML = `<span class="error">Test failed</span><br>${result.error || ''}`;
+            updateStatus(testClass, 'failed', 'Failed');
+            document.getElementById('output').innerHTML = `<span class="error">Failed</span><br>${result.error || ''}`;
         }
     } catch (error) {
         updateStatus(testClass, 'failed', 'Error');
@@ -294,9 +281,9 @@ async function runTestClass(system, testClass) {
 }
 
 async function runSystemTests(system) {
-    if (currentRunning) { alert('Test already in progress'); return; }
+    if (currentRunning) { alert('Teat already running'); return; }
     currentRunning = system;
-    document.getElementById('output').innerHTML = `System start ${system}...<div class="loading"></div>`;
+    document.getElementById('output').innerHTML = `Starting system ${system}...<div class="loading"></div>`;
 
     try {
         const response = await fetch('/run-tests/', {
@@ -307,14 +294,14 @@ async function runSystemTests(system) {
         const result = await response.json();
         document.getElementById('output').innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
     } catch (error) {
-        document.getElementById('output').innerHTML = `<span class="error">РћС€РёР±РєР°: ${error}</span>`;
+        document.getElementById('output').innerHTML = `<span class="error">Error: ${error}</span>`;
     } finally { currentRunning = null; }
 }
 
 async function runAllSystems() {
-    if (currentRunning) { alert('Test already in progress'); return; }
+    if (currentRunning) { alert('РўРµСЃС‚ СѓР¶Рµ РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ'); return; }
     currentRunning = 'all';
-    document.getElementById('output').innerHTML = `Running all systems...<div class="loading"></div>`;
+    document.getElementById('output').innerHTML = `Starting all syst...<div class="loading"></div>`;
 
     try {
         const response = await fetch('/run-tests/', {
