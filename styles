@@ -1,1 +1,70 @@
+import requests
+import base64
+import sys
 
+GITHUB_TOKEN = "YOUR_TOKEN"
+OWNER = "your_username"
+REPO = "your_repo"
+FILE_PATH = "file.txt"
+BRANCH = "main"
+
+LOCAL_FILE = "local.txt"
+
+
+def get_file():
+    url = f"https://api.github.com/repos/{OWNER}/{REPO}/contents/{FILE_PATH}"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+
+    r = requests.get(url, headers=headers)
+    r.raise_for_status()
+    data = r.json()
+
+    sha = data["sha"]
+    content = base64.b64decode(data["content"]).decode("utf-8")
+
+    # сохраняем sha отдельно
+    with open(".sha", "w") as f:
+        f.write(sha)
+
+    with open(LOCAL_FILE, "w") as f:
+        f.write(content)
+
+    print("Файл скачан в", LOCAL_FILE)
+
+
+def put_file():
+    url = f"https://api.github.com/repos/{OWNER}/{REPO}/contents/{FILE_PATH}"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+
+    with open(LOCAL_FILE) as f:
+        content = f.read()
+
+    with open(".sha") as f:
+        sha = f.read()
+
+    encoded = base64.b64encode(content.encode()).decode()
+
+    payload = {
+        "message": "Update via script",
+        "content": encoded,
+        "sha": sha,
+        "branch": BRANCH
+    }
+
+    r = requests.put(url, headers=headers, json=payload)
+    r.raise_for_status()
+
+    print("Файл обновлён")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Используй: get или put")
+        sys.exit(1)
+
+    if sys.argv[1] == "get":
+        get_file()
+    elif sys.argv[1] == "put":
+        put_file()
+    else:
+        print("Неизвестная команда")
