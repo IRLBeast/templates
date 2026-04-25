@@ -8,41 +8,57 @@ import unittest
 import io
 import sys
 import os
+import traceback
 
-# Добавляем путь к корневой директории
+# Добавляем пути для импорта тестов
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE_DIR)
 sys.path.insert(0, os.path.join(BASE_DIR, 'tests'))
 sys.path.insert(0, os.path.join(BASE_DIR, 'tests', 'aiskr'))
 sys.path.insert(0, os.path.join(BASE_DIR, 'tests', 'SMPstat'))
 
-from aiskr_test import AiskrTests
-from smpstat_test import SMPstatTests
+# Импортируем тесты из папки aiskr
+from tests.aiskr.aiskr_test import CreditRegisterTests, CreditRegisterAuthTests
+
+# Если добавишь тесты для SMPstat, раскомментируй:
+# from tests.SMPstat.smpstat_test import SMPstatTests
 
 
 def test_runner_dashboard(request):
+    """Дашборд для запуска тестов"""
     return render(request, 'main/mainpage.html')
 
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def run_tests_api(request):
+    """API для запуска тестов"""
     try:
         data = json.loads(request.body.decode('utf-8'))
-        test_system = data.get('system', '')
+        system = data.get('system', '')
         test_class_name = data.get('test_class', '')
         
-        if test_system == 'aiskr':
-            result = run_test_class(AiskrTests, test_class_name)
-        elif test_system == 'smpstat':
-            result = run_test_class(SMPstatTests, test_class_name)
+        print(f"Запуск: система={system}, класс={test_class_name}")
+        
+        if system == 'aiskr':
+            if test_class_name == 'CreditRegisterTests':
+                result = run_test_class(CreditRegisterTests)
+            elif test_class_name == 'CreditRegisterAuthTests':
+                result = run_test_class(CreditRegisterAuthTests)
+            else:
+                # Запускаем все тесты AISKR
+                result = run_all_aiskr_tests()
+        
+        elif system == 'smpstat':
+            # Когда добавишь тесты SMPstat
+            result = {'success': False, 'error': 'Тесты SMPstat в разработке'}
+        
         else:
             return JsonResponse({'success': False, 'error': 'Неизвестная система'}, status=400)
         
         return JsonResponse(result)
         
     except Exception as e:
-        import traceback
         return JsonResponse({
             'success': False,
             'error': str(e),
@@ -50,26 +66,29 @@ def run_tests_api(request):
         }, status=500)
 
 
-def run_test_class(test_class, test_method=None):
-    """Запуск тестового класса или метода"""
+def run_test_class(test_class):
+    """
+    Запуск конкретного тестового класса
+    test_class - это класс тестов (например, CreditRegisterTests)
+    """
     try:
         # Создаем загрузчик тестов
         loader = unittest.TestLoader()
         
-        if test_method:
-            # Загружаем конкретный метод
-            suite = loader.loadTestsFromName(f'{test_class.__name__}.{test_method}', test_class)
-        else:
-            # Загружаем весь класс
-            suite = loader.loadTestsFromTestCase(test_class)
+        # Загружаем все тесты из класса
+        suite = loader.loadTestsFromTestCase(test_class)
         
-        # Запускаем тесты с захватом вывода
+        # Захватываем вывод
         stream = io.StringIO()
         runner = unittest.TextTestRunner(stream=stream, verbosity=2)
+        
+        # Запускаем тесты
         result = runner.run(suite)
         
+        # Получаем вывод
         output = stream.getvalue()
         
+        # Формируем отчет
         return {
             'success': result.wasSuccessful(),
             'tests_run': result.testsRun,
@@ -83,9 +102,57 @@ def run_test_class(test_class, test_method=None):
         }
         
     except Exception as e:
-        import traceback
         return {
             'success': False,
             'error': str(e),
             'traceback': traceback.format_exc()
         }
+
+
+def run_all_aiskr_tests():
+    """Запуск всех тестов AISKR"""
+    results = {}
+    all_success = True
+    
+    # Список всех тестовых классов для AISKR
+    test_classes = [
+        ('CreditRegisterTests', CreditRegisterTests),
+        ('CreditRegisterAuthTests', CreditRegisterAuthTests),
+    ]
+    
+    for class_name, test_class in test_classes:
+        print(f"\n=== Запуск {class_name} ===")
+        result = run_test_class(test_class)
+        results[class_name] = result
+        if not result.get('success', False):
+            all_success = False
+    
+    # Формируем общий вывод
+    output = "="*50 + "\n"
+    output += "РЕЗУЛЬТАТЫ ВСЕХ ТЕСТОВ AISKR\n"
+    output += "="*50 + "\n"
+    
+    for class_name, result in results.items():
+        status = "✅ ПРОЙДЕН" if result.get('success') else "❌ ПРОВАЛЕН"
+        output += f"\n{class_name}: {status}\n"
+        output += f"  Тестов выполнено: {result.get('tests_run', 0)}\n"
+        output += f"  Ошибок: {result.get('errors', 0)}\n"
+        output += f"  Падений: {result.get('failures', 0)}\n"
+    
+    return {
+        'success': all_success,
+        'results': results,
+        'output': output
+    }
+
+
+def test_api(request):
+    """Тестовый endpoint для проверки работы API"""
+    return JsonResponse({
+        'success': True,
+        'message': 'API работает!',
+        'available_tests': {
+            'aiskr': ['CreditRegisterTests', 'CreditRegisterAuthTests'],
+            'smpstat': ['SMPstatTests']  # когда добавишь
+        }
+    })
