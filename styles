@@ -1,1 +1,74 @@
-test for putting file works
+D:Autotests/testapp
+в”‚   chromedriver.exe
+в”‚   conftests.py
+в”‚   db.sqlite3
+в”‚   driver_check.py
+в”‚   manage.py
+в”‚   requirements.txt
+в”‚   struct.txt
+в”‚   
+в”њв”Ђв”Ђв”Ђmain
+в”‚   в”‚   admin.py
+в”‚   в”‚   apps.py
+в”‚   в”‚   driver_check.py
+в”‚   в”‚   models.py
+в”‚   в”‚   tests.py
+в”‚   в”‚   urls.py
+в”‚   в”‚   views.py
+в”‚   в”‚   __init__.py
+в”‚   в”‚   
+в”‚   в”њв”Ђв”Ђв”Ђmigrations
+в”‚   в”‚   в”‚   __init__.py
+в”‚   в”‚   в”‚   
+в”‚   в”‚   в””в”Ђв”Ђв”Ђ__pycache__
+в”‚   в”‚           __init__.cpython-313.pyc
+в”‚   в”‚           
+в”‚   в”њв”Ђв”Ђв”Ђtemplates
+в”‚   в”‚   в””в”Ђв”Ђв”Ђmain
+в”‚   в”‚           mainpage.html #С€Р°Р±Р»РѕРЅ СЃС‚СЂР°РЅРёС†С‹
+в”‚   в”‚           
+в”‚   в””в”Ђв”Ђв”Ђ__pycache__
+в”‚           admin.cpython-313.pyc
+в”‚           apps.cpython-313.pyc
+в”‚           models.cpython-313.pyc
+в”‚           tests.cpython-313.pyc
+в”‚           urls.cpython-313.pyc
+в”‚           views.cpython-313.pyc
+в”‚           __init__.cpython-313.pyc
+в”‚           
+в”њв”Ђв”Ђв”Ђtestapp
+в”‚   в”‚   asgi.py
+в”‚   в”‚   settings.py
+в”‚   в”‚   urls.py
+в”‚   в”‚   wsgi.py
+в”‚   в”‚   __init__.py
+в”‚   в”‚   
+в”‚   в””в”Ђв”Ђв”Ђ__pycache__
+в”‚           settings.cpython-313.pyc
+в”‚           urls.cpython-313.pyc
+в”‚           wsgi.cpython-313.pyc
+в”‚           __init__.cpython-313.pyc
+в”‚           
+в”њв”Ђв”Ђв”Ђtests
+в”‚   в”‚   BaseTestSett.py
+в”‚   в”‚   __init__.py
+в”‚   в”‚   
+в”‚   в”њв”Ђв”Ђв”Ђaiskr #СЃРёСЃС‚РµРјР° 1
+в”‚   в”‚   в”‚   aiskr_test.py
+в”‚   в”‚   в”‚   config.py
+в”‚   в”‚   в”‚   __init__.py
+в”‚   в”‚   в”‚   
+в”‚   в”‚   в””в”Ђв”Ђв”Ђ__pycache__
+в”‚   в”‚           aiskr_test.cpython-313.pyc
+в”‚   в”‚           __init__.cpython-313.pyc
+в”‚   в”‚           
+в”‚   в”њв”Ђв”Ђв”ЂSMPstat #СЃРёСЃС‚РµРјР° 2
+в”‚   в”‚       smpstat_test.py
+в”‚   в”‚       __init__.py
+в”‚   в”‚       
+в”‚   в””в”Ђв”Ђв”Ђ__pycache__
+в”‚           BaseTestSett.cpython-313.pyc
+в”‚           __init__.cpython-313.pyc
+в”‚           
+в””в”Ђв”Ђв”Ђ__pycache__
+        driver_check.cpython-313.pyc
