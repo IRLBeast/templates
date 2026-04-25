@@ -1,131 +1,66 @@
-# D:/Autotests/testapp/main/views.py
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-import json
-import unittest
-import io
-import sys
+# D:/Autotests/testapp/tests/aiskr/aiskr_test.py
+from django.test import LiveServerTestCase
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 import os
-import traceback
-
-# Добавляем путь к корню проекта
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-# Добавляем путь к папке tests и к папке aiskr
-sys.path.insert(0, BASE_DIR)  # D:/Autotests/testapp
-sys.path.insert(0, os.path.join(BASE_DIR, 'tests'))  # D:/Autotests/testapp/tests
-sys.path.insert(0, os.path.join(BASE_DIR, 'tests', 'aiskr'))  # D:/Autotests/testapp/tests/aiskr
-
-# ПРОВЕРКА: печатаем пути для отладки
-print("="*50)
-print("BASE_DIR:", BASE_DIR)
-print("Путь к tests:", os.path.join(BASE_DIR, 'tests'))
-print("Путь к aiskr:", os.path.join(BASE_DIR, 'tests', 'aiskr'))
-print("Содержимое tests:", os.listdir(os.path.join(BASE_DIR, 'tests')) if os.path.exists(os.path.join(BASE_DIR, 'tests')) else "папка не найдена")
-print("Содержимое aiskr:", os.listdir(os.path.join(BASE_DIR, 'tests', 'aiskr')) if os.path.exists(os.path.join(BASE_DIR, 'tests', 'aiskr')) else "папка не найдена")
-print("="*50)
-
-# ИМПОРТИРУЕМ ТЕСТЫ
-try:
-    # Пробуем разные варианты импорта
-    from aiskr_test import CreditRegisterTests, CreditRegisterAuthTests
-    print("✅ Импорт из aiskr_test успешен")
-except ImportError as e:
-    print(f"❌ Ошибка импорта из aiskr_test: {e}")
-    try:
-        from tests.aiskr.aiskr_test import CreditRegisterTests, CreditRegisterAuthTests
-        print("✅ Импорт из tests.aiskr.aiskr_test успешен")
-    except ImportError as e2:
-        print(f"❌ Ошибка импорта из tests.aiskr.aiskr_test: {e2}")
-        # Временно создаем заглушки для тестов, чтобы сайт работал
-        class CreditRegisterTests:
-            pass
-        class CreditRegisterAuthTests:
-            pass
-        print("⚠️ Используются заглушки для тестов")
 
 
-def test_runner_dashboard(request):
-    """Дашборд для запуска тестов"""
-    return render(request, 'main/mainpage.html')
-
-
-@csrf_exempt
-@require_http_methods(["POST"])
-def run_tests_api(request):
-    """API для запуска тестов"""
-    try:
-        data = json.loads(request.body.decode('utf-8'))
-        test_name = data.get('test_name', '')
+class CreditRegisterTests(LiveServerTestCase):
+    """Тесты для кредитного регистра"""
+    
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
         
-        print(f"Запуск теста: {test_name}")
+        # Путь к chromedriver.exe (в корне проекта)
+        driver_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "chromedriver.exe")
         
-        if test_name == 'CreditRegisterTests':
-            result = run_test_class(CreditRegisterTests)
-        elif test_name == 'CreditRegisterAuthTests':
-            result = run_test_class(CreditRegisterAuthTests)
-        else:
-            return JsonResponse({'success': False, 'error': f'Неизвестный тест: {test_name}'}, status=400)
+        service = Service(executable_path=driver_path)
+        options = Options()
+        options.add_argument("--start-maximized")
+        options.add_argument("--ignore-certificate-errors")
+        options.add_argument("--ignore-ssl-errors=yes")
         
-        return JsonResponse(result)
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e),
-            'traceback': traceback.format_exc()
-        }, status=500)
+        cls.driver = webdriver.Chrome(service=service, options=options)
+        cls.driver.implicitly_wait(10)
+    
+    @classmethod
+    def tearDownClass(cls):
+        cls.driver.quit()
+        super().tearDownClass()
+    
+    def test_credit_register_page(self):
+        """Тест открытия страницы"""
+        self.driver.get(f"{self.live_server_url}/")
+        assert "Кредитный регистр" in self.driver.title
+        print("✅ Страница кредитного регистра открыта")
 
 
-def run_test_class(test_class):
-    """Запуск тестового класса"""
-    try:
-        # Создаем загрузчик тестов
-        loader = unittest.TestLoader()
+class CreditRegisterAuthTests(LiveServerTestCase):
+    """Тесты авторизации"""
+    
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
         
-        # Загружаем все тесты из класса
-        suite = loader.loadTestsFromTestCase(test_class)
+        driver_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "chromedriver.exe")
         
-        # Захватываем вывод
-        stream = io.StringIO()
-        runner = unittest.TextTestRunner(stream=stream, verbosity=2)
+        service = Service(executable_path=driver_path)
+        options = Options()
+        options.add_argument("--start-maximized")
+        options.add_argument("--ignore-certificate-errors")
         
-        # Запускаем тесты
-        result = runner.run(suite)
-        
-        # Получаем вывод
-        output = stream.getvalue()
-        
-        return {
-            'success': result.wasSuccessful(),
-            'tests_run': result.testsRun,
-            'failures': len(result.failures),
-            'errors': len(result.errors),
-            'output': output,
-            'details': {
-                'failures': [(str(f[0]), str(f[1])) for f in result.failures],
-                'errors': [(str(e[0]), str(e[1])) for e in result.errors]
-            }
-        }
-        
-    except Exception as e:
-        return {
-            'success': False,
-            'error': str(e),
-            'traceback': traceback.format_exc()
-        }
-
-
-def test_api(request):
-    """Тестовый endpoint для проверки работы API"""
-    return JsonResponse({
-        'success': True,
-        'message': 'API работает!',
-        'paths': {
-            'base_dir': BASE_DIR,
-            'tests_dir': os.path.join(BASE_DIR, 'tests'),
-            'aiskr_dir': os.path.join(BASE_DIR, 'tests', 'aiskr')
-        }
-    })
+        cls.driver = webdriver.Chrome(service=service, options=options)
+        cls.driver.implicitly_wait(10)
+    
+    @classmethod
+    def tearDownClass(cls):
+        cls.driver.quit()
+        super().tearDownClass()
+    
+    def test_auth_page(self):
+        """Тест страницы авторизации"""
+        self.driver.get(f"{self.live_server_url}/AuthenticateLegal")
+        assert "Вход через USBToken" in self.driver.page_source
+        print("✅ Страница авторизации открыта")
