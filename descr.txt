@@ -1,3 +1,141 @@
+# D:/Autotests/testapp/main/views.py
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.test import TestCase
+import json
+import traceback
+import sys
+import os
+import unittest
+
+
+# Список доступных систем
+SYSTEMS = {
+    'credit_register': {
+        'name': 'Кредитный регистр',
+        'description': 'Тесты для кредитного регистра и авторизации',
+        'module_path': 'main.tests',  # Путь к файлу с тестами
+        'test_classes': ['CreditRegisterTests', 'CreditRegisterAuthTests'],
+        'color': 'blue'
+    },
+}
+
+
+def test_runner_dashboard(request):
+    """Дашборд для запуска тестов"""
+    return render(request, 'main/dashboard.html', {'systems': SYSTEMS})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def run_tests_api(request):
+    """API для запуска тестов"""
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        system_key = data.get('system', '')
+        test_class_name = data.get('test_class', '')
+        
+        if system_key not in SYSTEMS:
+            return JsonResponse({'success': False, 'error': 'Неизвестная система'}, status=400)
+        
+        # Запускаем тесты
+        result = run_test_class(test_class_name)
+        
+        return JsonResponse(result)
+        
+    except Exception as e:
+        traceback_str = traceback.format_exc()
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback_str
+        }, status=500)
+
+
+def run_test_class(test_class_name):
+    """Запуск конкретного тестового класса"""
+    try:
+        # Импортируем модуль с тестами
+        from main import tests
+        
+        # Получаем класс тестов
+        if not hasattr(tests, test_class_name):
+            return {
+                'success': False,
+                'error': f'Тестовый класс {test_class_name} не найден'
+            }
+        
+        test_class = getattr(tests, test_class_name)
+        
+        # Создаем загрузчик тестов
+        loader = unittest.TestLoader()
+        suite = loader.loadTestsFromTestCase(test_class)
+        
+        # Запускаем тесты с захватом вывода
+        import io
+        from django.test.runner import DiscoverRunner
+        
+        # Создаем временный вывод
+        stream = io.StringIO()
+        
+        # Используем стандартный unittest runner
+        runner = unittest.TextTestRunner(stream=stream, verbosity=2)
+        result = runner.run(suite)
+        
+        # Получаем вывод
+        output = stream.getvalue()
+        
+        # Формируем отчет
+        return {
+            'success': result.wasSuccessful(),
+            'tests_run': result.testsRun,
+            'failures': len(result.failures),
+            'errors': len(result.errors),
+            'output': output,
+            'details': {
+                'failures': [(str(f[0]), str(f[1])) for f in result.failures],
+                'errors': [(str(e[0]), str(e[1])) for e in result.errors]
+            }
+        }
+        
+    except Exception as e:
+        traceback_str = traceback.format_exc()
+        return {
+            'success': False,
+            'error': str(e),
+            'traceback': traceback_str
+        }
+
+
+def run_all_system_tests(system_key):
+    """Запуск всех тестов системы"""
+    system = SYSTEMS.get(system_key, {})
+    results = {}
+    all_success = True
+    
+    for test_class_name in system.get('test_classes', []):
+        result = run_test_class(test_class_name)
+        results[test_class_name] = result
+        if not result.get('success', False):
+            all_success = False
+    
+    return {
+        'success': all_success,
+        'results': results
+    }
+
+
+def test_api(request):
+    """Тестовый endpoint"""
+    return JsonResponse({
+        'success': True,
+        'message': 'API работает!',
+        'method': request.method
+    })
+
+____________
 #Базовый класс с общими настройками:
 # D:/Autotests/testapp/tests/base_test.py
 from django.test import LiveServerTestCase
