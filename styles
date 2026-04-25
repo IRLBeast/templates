@@ -10,18 +10,41 @@ import sys
 import os
 import traceback
 
-# Добавляем пути для импорта тестов
+# Добавляем путь к корню проекта
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, BASE_DIR)
-sys.path.insert(0, os.path.join(BASE_DIR, 'tests'))
-sys.path.insert(0, os.path.join(BASE_DIR, 'tests', 'aiskr'))
-sys.path.insert(0, os.path.join(BASE_DIR, 'tests', 'SMPstat'))
 
-# Импортируем тесты из папки aiskr
-from tests.aiskr.aiskr_test import CreditRegisterTests, CreditRegisterAuthTests
+# Добавляем путь к папке tests и к папке aiskr
+sys.path.insert(0, BASE_DIR)  # D:/Autotests/testapp
+sys.path.insert(0, os.path.join(BASE_DIR, 'tests'))  # D:/Autotests/testapp/tests
+sys.path.insert(0, os.path.join(BASE_DIR, 'tests', 'aiskr'))  # D:/Autotests/testapp/tests/aiskr
 
-# Если добавишь тесты для SMPstat, раскомментируй:
-# from tests.SMPstat.smpstat_test import SMPstatTests
+# ПРОВЕРКА: печатаем пути для отладки
+print("="*50)
+print("BASE_DIR:", BASE_DIR)
+print("Путь к tests:", os.path.join(BASE_DIR, 'tests'))
+print("Путь к aiskr:", os.path.join(BASE_DIR, 'tests', 'aiskr'))
+print("Содержимое tests:", os.listdir(os.path.join(BASE_DIR, 'tests')) if os.path.exists(os.path.join(BASE_DIR, 'tests')) else "папка не найдена")
+print("Содержимое aiskr:", os.listdir(os.path.join(BASE_DIR, 'tests', 'aiskr')) if os.path.exists(os.path.join(BASE_DIR, 'tests', 'aiskr')) else "папка не найдена")
+print("="*50)
+
+# ИМПОРТИРУЕМ ТЕСТЫ
+try:
+    # Пробуем разные варианты импорта
+    from aiskr_test import CreditRegisterTests, CreditRegisterAuthTests
+    print("✅ Импорт из aiskr_test успешен")
+except ImportError as e:
+    print(f"❌ Ошибка импорта из aiskr_test: {e}")
+    try:
+        from tests.aiskr.aiskr_test import CreditRegisterTests, CreditRegisterAuthTests
+        print("✅ Импорт из tests.aiskr.aiskr_test успешен")
+    except ImportError as e2:
+        print(f"❌ Ошибка импорта из tests.aiskr.aiskr_test: {e2}")
+        # Временно создаем заглушки для тестов, чтобы сайт работал
+        class CreditRegisterTests:
+            pass
+        class CreditRegisterAuthTests:
+            pass
+        print("⚠️ Используются заглушки для тестов")
 
 
 def test_runner_dashboard(request):
@@ -35,26 +58,16 @@ def run_tests_api(request):
     """API для запуска тестов"""
     try:
         data = json.loads(request.body.decode('utf-8'))
-        system = data.get('system', '')
-        test_class_name = data.get('test_class', '')
+        test_name = data.get('test_name', '')
         
-        print(f"Запуск: система={system}, класс={test_class_name}")
+        print(f"Запуск теста: {test_name}")
         
-        if system == 'aiskr':
-            if test_class_name == 'CreditRegisterTests':
-                result = run_test_class(CreditRegisterTests)
-            elif test_class_name == 'CreditRegisterAuthTests':
-                result = run_test_class(CreditRegisterAuthTests)
-            else:
-                # Запускаем все тесты AISKR
-                result = run_all_aiskr_tests()
-        
-        elif system == 'smpstat':
-            # Когда добавишь тесты SMPstat
-            result = {'success': False, 'error': 'Тесты SMPstat в разработке'}
-        
+        if test_name == 'CreditRegisterTests':
+            result = run_test_class(CreditRegisterTests)
+        elif test_name == 'CreditRegisterAuthTests':
+            result = run_test_class(CreditRegisterAuthTests)
         else:
-            return JsonResponse({'success': False, 'error': 'Неизвестная система'}, status=400)
+            return JsonResponse({'success': False, 'error': f'Неизвестный тест: {test_name}'}, status=400)
         
         return JsonResponse(result)
         
@@ -67,10 +80,7 @@ def run_tests_api(request):
 
 
 def run_test_class(test_class):
-    """
-    Запуск конкретного тестового класса
-    test_class - это класс тестов (например, CreditRegisterTests)
-    """
+    """Запуск тестового класса"""
     try:
         # Создаем загрузчик тестов
         loader = unittest.TestLoader()
@@ -88,7 +98,6 @@ def run_test_class(test_class):
         # Получаем вывод
         output = stream.getvalue()
         
-        # Формируем отчет
         return {
             'success': result.wasSuccessful(),
             'tests_run': result.testsRun,
@@ -109,50 +118,14 @@ def run_test_class(test_class):
         }
 
 
-def run_all_aiskr_tests():
-    """Запуск всех тестов AISKR"""
-    results = {}
-    all_success = True
-    
-    # Список всех тестовых классов для AISKR
-    test_classes = [
-        ('CreditRegisterTests', CreditRegisterTests),
-        ('CreditRegisterAuthTests', CreditRegisterAuthTests),
-    ]
-    
-    for class_name, test_class in test_classes:
-        print(f"\n=== Запуск {class_name} ===")
-        result = run_test_class(test_class)
-        results[class_name] = result
-        if not result.get('success', False):
-            all_success = False
-    
-    # Формируем общий вывод
-    output = "="*50 + "\n"
-    output += "РЕЗУЛЬТАТЫ ВСЕХ ТЕСТОВ AISKR\n"
-    output += "="*50 + "\n"
-    
-    for class_name, result in results.items():
-        status = "✅ ПРОЙДЕН" if result.get('success') else "❌ ПРОВАЛЕН"
-        output += f"\n{class_name}: {status}\n"
-        output += f"  Тестов выполнено: {result.get('tests_run', 0)}\n"
-        output += f"  Ошибок: {result.get('errors', 0)}\n"
-        output += f"  Падений: {result.get('failures', 0)}\n"
-    
-    return {
-        'success': all_success,
-        'results': results,
-        'output': output
-    }
-
-
 def test_api(request):
     """Тестовый endpoint для проверки работы API"""
     return JsonResponse({
         'success': True,
         'message': 'API работает!',
-        'available_tests': {
-            'aiskr': ['CreditRegisterTests', 'CreditRegisterAuthTests'],
-            'smpstat': ['SMPstatTests']  # когда добавишь
+        'paths': {
+            'base_dir': BASE_DIR,
+            'tests_dir': os.path.join(BASE_DIR, 'tests'),
+            'aiskr_dir': os.path.join(BASE_DIR, 'tests', 'aiskr')
         }
     })
