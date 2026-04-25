@@ -1,74 +1,91 @@
-D:Autotests/testapp
-в”‚   chromedriver.exe
-в”‚   conftests.py
-в”‚   db.sqlite3
-в”‚   driver_check.py
-в”‚   manage.py
-в”‚   requirements.txt
-в”‚   struct.txt
-в”‚   
-в”њв”Ђв”Ђв”Ђmain
-в”‚   в”‚   admin.py
-в”‚   в”‚   apps.py
-в”‚   в”‚   driver_check.py
-в”‚   в”‚   models.py
-в”‚   в”‚   tests.py
-в”‚   в”‚   urls.py
-в”‚   в”‚   views.py
-в”‚   в”‚   __init__.py
-в”‚   в”‚   
-в”‚   в”њв”Ђв”Ђв”Ђmigrations
-в”‚   в”‚   в”‚   __init__.py
-в”‚   в”‚   в”‚   
-в”‚   в”‚   в””в”Ђв”Ђв”Ђ__pycache__
-в”‚   в”‚           __init__.cpython-313.pyc
-в”‚   в”‚           
-в”‚   в”њв”Ђв”Ђв”Ђtemplates
-в”‚   в”‚   в””в”Ђв”Ђв”Ђmain
-в”‚   в”‚           mainpage.html #С€Р°Р±Р»РѕРЅ СЃС‚СЂР°РЅРёС†С‹
-в”‚   в”‚           
-в”‚   в””в”Ђв”Ђв”Ђ__pycache__
-в”‚           admin.cpython-313.pyc
-в”‚           apps.cpython-313.pyc
-в”‚           models.cpython-313.pyc
-в”‚           tests.cpython-313.pyc
-в”‚           urls.cpython-313.pyc
-в”‚           views.cpython-313.pyc
-в”‚           __init__.cpython-313.pyc
-в”‚           
-в”њв”Ђв”Ђв”Ђtestapp
-в”‚   в”‚   asgi.py
-в”‚   в”‚   settings.py
-в”‚   в”‚   urls.py
-в”‚   в”‚   wsgi.py
-в”‚   в”‚   __init__.py
-в”‚   в”‚   
-в”‚   в””в”Ђв”Ђв”Ђ__pycache__
-в”‚           settings.cpython-313.pyc
-в”‚           urls.cpython-313.pyc
-в”‚           wsgi.cpython-313.pyc
-в”‚           __init__.cpython-313.pyc
-в”‚           
-в”њв”Ђв”Ђв”Ђtests
-в”‚   в”‚   BaseTestSett.py
-в”‚   в”‚   __init__.py
-в”‚   в”‚   
-в”‚   в”њв”Ђв”Ђв”Ђaiskr #СЃРёСЃС‚РµРјР° 1
-в”‚   в”‚   в”‚   aiskr_test.py
-в”‚   в”‚   в”‚   config.py
-в”‚   в”‚   в”‚   __init__.py
-в”‚   в”‚   в”‚   
-в”‚   в”‚   в””в”Ђв”Ђв”Ђ__pycache__
-в”‚   в”‚           aiskr_test.cpython-313.pyc
-в”‚   в”‚           __init__.cpython-313.pyc
-в”‚   в”‚           
-в”‚   в”њв”Ђв”Ђв”ЂSMPstat #СЃРёСЃС‚РµРјР° 2
-в”‚   в”‚       smpstat_test.py
-в”‚   в”‚       __init__.py
-в”‚   в”‚       
-в”‚   в””в”Ђв”Ђв”Ђ__pycache__
-в”‚           BaseTestSett.cpython-313.pyc
-в”‚           __init__.cpython-313.pyc
-в”‚           
-в””в”Ђв”Ђв”Ђ__pycache__
-        driver_check.cpython-313.pyc
+# D:/Autotests/testapp/main/views.py
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+import json
+import unittest
+import io
+import sys
+import os
+
+# Добавляем путь к корневой директории
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE_DIR)
+sys.path.insert(0, os.path.join(BASE_DIR, 'tests'))
+sys.path.insert(0, os.path.join(BASE_DIR, 'tests', 'aiskr'))
+sys.path.insert(0, os.path.join(BASE_DIR, 'tests', 'SMPstat'))
+
+from aiskr_test import AiskrTests
+from smpstat_test import SMPstatTests
+
+
+def test_runner_dashboard(request):
+    return render(request, 'main/mainpage.html')
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def run_tests_api(request):
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+        test_system = data.get('system', '')
+        test_class_name = data.get('test_class', '')
+        
+        if test_system == 'aiskr':
+            result = run_test_class(AiskrTests, test_class_name)
+        elif test_system == 'smpstat':
+            result = run_test_class(SMPstatTests, test_class_name)
+        else:
+            return JsonResponse({'success': False, 'error': 'Неизвестная система'}, status=400)
+        
+        return JsonResponse(result)
+        
+    except Exception as e:
+        import traceback
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }, status=500)
+
+
+def run_test_class(test_class, test_method=None):
+    """Запуск тестового класса или метода"""
+    try:
+        # Создаем загрузчик тестов
+        loader = unittest.TestLoader()
+        
+        if test_method:
+            # Загружаем конкретный метод
+            suite = loader.loadTestsFromName(f'{test_class.__name__}.{test_method}', test_class)
+        else:
+            # Загружаем весь класс
+            suite = loader.loadTestsFromTestCase(test_class)
+        
+        # Запускаем тесты с захватом вывода
+        stream = io.StringIO()
+        runner = unittest.TextTestRunner(stream=stream, verbosity=2)
+        result = runner.run(suite)
+        
+        output = stream.getvalue()
+        
+        return {
+            'success': result.wasSuccessful(),
+            'tests_run': result.testsRun,
+            'failures': len(result.failures),
+            'errors': len(result.errors),
+            'output': output,
+            'details': {
+                'failures': [(str(f[0]), str(f[1])) for f in result.failures],
+                'errors': [(str(e[0]), str(e[1])) for e in result.errors]
+            }
+        }
+        
+    except Exception as e:
+        import traceback
+        return {
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }
