@@ -1,1 +1,300 @@
-no text
+#driver.py
+import pytest
+import os
+from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+import time
+
+
+@pytest.fixture
+def chrome_driver():
+    driver_path = os.path.join(os.path.dirname(__file__), "chromedriver.exe")
+
+    # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ С„Р°Р№Р» СЃСѓС‰РµСЃС‚РІСѓРµС‚
+    if not os.path.exists(driver_path):
+        print(f"ERROR: chromedriver.exe not found at: {driver_path}")
+        print("Download and place it in the project folder")
+        raise FileNotFoundError(f"chromedriver.exe not found at {driver_path}")
+
+    service = Service(executable_path=driver_path)
+
+    options = Options()
+    options.add_argument("--start-maximized")
+    #options.add_argument("--headless")  # СЂР°СЃРєРѕРјРјРµРЅС‚ РґР»СЏ СЂР°Р±РѕС‚С‹ Р±РµР· РѕРєРЅР°
+    # options.add_argument("--remote-debugging-port=9222") # СЌС‚Рѕ РґР»СЏ РѕС‚Р»Р°РґРєРё РІ СЂРµР¶РёРјРµ Р±РµР· РѕРєРЅР°
+
+    # РґР»СЏ РїРѕРґРјРµРЅС‹ РµСЃР»Рё РЅСѓР¶РЅРѕ
+    options.add_argument("user-agent=Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:84.0) Gecko/20100101 Firefox/84.0")
+
+    # СЌС‚Рё С‚СЂРё РѕРїС†РёРё (РІРєР»СЋС‡Р°С‚СЊ РѕРґРЅСѓ РєР°РєСѓСЋ-РЅРёР±СѓРґСЊ) РµСЃР»Рё СЃР°Р№С‚ Р±Р»РѕС‡РёС‚ Р°РІС‚РѕС‚РµСЃС‚С‹
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    # options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    # options.add_experimental_option("useAutomationExtension", False)
+
+    # Р”Р»СЏ OAuth Р°РІС‚РѕСЂРёР·Р°С†РёРё Рё РїРµСЂРµС…РѕРґРѕРІ РјРµР¶РґСѓ РґРѕРјРµРЅР°РјРё
+    options.add_argument("--disable-web-security")
+    options.add_argument("--allow-running-insecure-content")
+    options.add_argument("--ignore-certificate-errors")
+
+    driver = webdriver.Chrome(service=service, options=options)
+    driver.set_page_load_timeout(30)
+    driver.implicitly_wait(10)
+
+    # С‚СѓС‚ РїРµСЂРµРґР°РµРј СЃР»РѕРІР°СЂСЊ РЅР° СѓРґР°Р»РµРЅРёРµ РєРѕРјР°РЅРґ РїРѕ РїСЂРёР·РЅР°РєСѓ cdc РєРѕС‚РѕСЂС‹Р№ РїРѕРєР°Р·С‹РІР°РµС‚ С‡С‚Рѕ Р±СЂР°СѓР·РµСЂРѕРј СѓРїСЂР°РІР»СЏРµРј Р°РІС‚РѕС‚РµСЃС‚
+    # РґР»СЏ РѕР±С…РѕРґР° cloudflare РёР»Рё РµС‰Рµ С‡РµРіРѕ-РЅРёР±СѓРґСЊ
+    driver.execute_cdp_cmd("Page.addScriptToEvaluateOnNewDocument", {
+        'source': '''
+        delete.window.cdc_adoQpoasnfa76pfcZLmcfl_Array;
+        delete.window.cdc_adoQpoasnfa76pfcZLmcfl_JSON;
+        delete.window.cdc_adoQpoasnfa76pfcZLmcfl_Object;
+        delete.window.cdc_adoQpoasnfa76pfcZLmcfl_Promise;
+        delete.window.cdc_adoQpoasnfa76pfcZLmcfl_Proxy;
+        delete.window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol;
+        delete.window.cdc_adoQpoasnfa76pfcZLmcfl_Window;
+        '''
+    })
+    yield driver
+    print("\nClosing browser...")
+    driver.close()
+    driver.quit()
+
+#kr_legal_users.py
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
+from driver import chrome_driver
+
+
+def test_credit_register_basic(chrome_driver):
+    wait = WebDriverWait(chrome_driver, 15)
+
+    # 1 РѕС‚РєСЂС‹РІР°РµРј СЃС‚СЂР°РЅРёС†Сѓ
+    chrome_driver.get("http://q-web-open/")
+    time.sleep(5)
+    
+    # 2 РїСЂРѕРІРµСЂРєР° Р·Р°РіРѕР»РѕРІРѕРєР°
+    assert "РљСЂРµРґРёС‚РЅС‹Р№ СЂРµРіРёСЃС‚СЂ" in chrome_driver.title
+    print(f"Р—Р°РіРѕР»РѕРІРѕРє: {chrome_driver.title}")
+    
+    # 3 РїРѕРёСЃРє СЌР»РµРјРµРЅС‚Р° РЅР° СЃС‚СЂР°РЅРёС†Рµ
+    try:
+        assert "РљСЂРµРґРёС‚РЅР°СЏ РёСЃС‚РѕСЂРёСЏ" in chrome_driver.page_source
+        print("РўРµРєСЃС‚ 'РљСЂРµРґРёС‚РЅР°СЏ РёСЃС‚РѕСЂРёСЏ' РЅР°Р№РґРµРЅ РЅР° СЃС‚СЂР°РЅРёС†Рµ")
+    except AssertionError:
+        print("РљСЂРµРґРёС‚РЅР°СЏ РёСЃС‚РѕСЂРёСЏ' РЅРµ РЅР°Р№РґРµРЅ РЅР° СЃС‚СЂР°РЅРёС†Рµ")
+        raise
+    
+    # 4 РїРµСЂРµС…РѕРґ РІ Р»РёС‡РЅС‹Р№ РєР°Р±РёРЅРµС‚
+    personal_link = chrome_driver.find_element(By.XPATH, "//a[contains(text(), 'Р›РёС‡РЅС‹Р№ РєР°Р±РёРЅРµС‚') or @href='/Authenticate']")
+    personal_link.click()
+    time.sleep(3)
+
+    # 4.1 РїСЂРѕРІРµСЂРєР° РїРµСЂРµС…РѕРґР°
+    assert "/Authenticate" in chrome_driver.current_url
+    print(f"РџРµСЂРµС€Р»Рё РЅР°: {chrome_driver.current_url}")
+
+    # 4.2 РїРµСЂРµС…РѕРґ РЅР° СЋСЂР»РёС†Рѕ
+    personal_link = chrome_driver.find_element(By.XPATH, "//a[contains(text(), 'Р›РёС‡РЅС‹Р№ РєР°Р±РёРЅРµС‚') or @href='/AuthenticateLegal']")
+    personal_link.click()
+    time.sleep(3)
+    
+    # 4.3 РїСЂРѕРІРµСЂРєР° РїРµСЂРµС…РѕРґР°
+    assert "/AuthenticateLegal" in chrome_driver.current_url
+    print(f"РџРµСЂРµС€Р»Рё РЅР°: {chrome_driver.current_url}")
+
+    
+    print("РўРµСЃС‚ Р·Р°РІРµСЂС€РµРЅ СѓСЃРїРµС€РЅРѕ!")
+
+
+
+#mainpage.html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>РџР°РЅРµР»СЊ СѓРїСЂР°РІР»РµРЅРёСЏ С‚РµСЃС‚Р°РјРё</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1400px; margin: 20px auto; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); overflow: hidden; }
+
+        /* Р’РєР»Р°РґРєРё */
+        .tabs { display: flex; background: #f8f9fa; border-bottom: 2px solid #dee2e6; }
+        .tab { padding: 15px 25px; cursor: pointer; border: none; background: none; font-size: 16px; transition: all 0.3s; }
+        .tab:hover { background: #e9ecef; }
+        .tab.active { background: white; border-bottom: 2px solid #007bff; color: #007bff; font-weight: bold; }
+
+        /* РљРѕРЅС‚РµРЅС‚ РІРєР»Р°РґРѕРє */
+        .tab-content { display: none; padding: 20px; }
+        .tab-content.active { display: block; }
+
+        /* РўРµСЃС‚С‹ */
+        .test-card { border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin: 10px 0; background: #fafafa; cursor: pointer; transition: all 0.3s; }
+        .test-card:hover { background: #e9ecef; transform: translateX(5px); }
+        .test-card h3 { margin: 0 0 10px 0; color: #007bff; }
+        .test-card p { margin: 0; color: #666; font-size: 14px; }
+
+        .status { display: inline-block; padding: 3px 8px; border-radius: 3px; font-size: 12px; margin-top: 10px; }
+        .status.passed { background: #28a745; color: white; }
+        .status.failed { background: #dc3545; color: white; }
+        .status.running { background: #ffc107; color: #333; }
+
+        .run-all-btn { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin-bottom: 20px; }
+        .output { background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 500px; overflow: auto; margin-top: 20px; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .loading { display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #007bff; border-radius: 50%; animation: spin 1s linear infinite; margin-left: 10px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('credit_register')">РљСЂРµРґРёС‚РЅС‹Р№ СЂРµРіРёСЃС‚СЂ</button>
+        <button class="tab" onclick="switchTab('payment_system')">РџР»Р°С‚РµР¶РЅР°СЏ СЃРёСЃС‚РµРјР°</button>
+        <button class="tab" onclick="switchTab('all_systems')">Р’СЃРµ СЃРёСЃС‚РµРјС‹</button>
+    </div>
+
+    <div id="credit_register" class="tab-content active">
+        <button class="run-all-btn" onclick="runSystemTests('credit_register')">Р—Р°РїСѓСЃС‚РёС‚СЊ РІСЃРµ С‚РµСЃС‚С‹ РєСЂРµРґРёС‚РЅРѕРіРѕ СЂРµРіРёСЃС‚СЂР°</button>
+        <div class="test-card" onclick="runTestClass('credit_register', 'CreditRegisterTests')">
+            <h3>Р‘Р°Р·РѕРІС‹Рµ С‚РµСЃС‚С‹ РєСЂРµРґРёС‚РЅРѕРіРѕ СЂРµРіРёСЃС‚СЂР°</h3>
+            <p>РџСЂРѕРІРµСЂРєР° Р·Р°РіРѕР»РѕРІРєР°, РЅР°РІРёРіР°С†РёРё, РѕСЃРЅРѕРІРЅС‹С… С„СѓРЅРєС†РёР№</p>
+            <div id="status-CreditRegisterTests" class="status">РќРµ Р·Р°РїСѓС‰РµРЅ</div>
+        </div>
+        <div class="test-card" onclick="runTestClass('credit_register', 'CreditRegisterAuthTests')">
+            <h3>РўРµСЃС‚С‹ Р°РІС‚РѕСЂРёР·Р°С†РёРё</h3>
+            <p>РџСЂРѕРІРµСЂРєР° РІС…РѕРґР° С‡РµСЂРµР· USBToken Рё OAuth</p>
+            <div id="status-CreditRegisterAuthTests" class="status">РќРµ Р·Р°РїСѓС‰РµРЅ</div>
+        </div>
+    </div>
+
+    <div id="payment_system" class="tab-content">
+        <button class="run-all-btn" onclick="runSystemTests('payment_system')">Р—Р°РїСѓСЃС‚РёС‚СЊ РІСЃРµ С‚РµСЃС‚С‹ РїР»Р°С‚РµР¶РЅРѕР№ СЃРёСЃС‚РµРјС‹</button>
+        <div class="test-card" onclick="runTestClass('payment_system', 'NewSystemTests')">
+            <h3>рџ’° РўРµСЃС‚С‹ РїР»Р°С‚РµР¶РµР№</h3>
+            <p>РџСЂРѕРІРµСЂРєР° С„РѕСЂРјС‹ РїР»Р°С‚РµР¶Р° Рё РІР°Р»РёРґР°С†РёРё</p>
+            <div id="status-NewSystemTests" class="status">РќРµ Р·Р°РїСѓС‰РµРЅ</div>
+        </div>
+        <div class="test-card" onclick="runTestClass('payment_system', 'NewSystemAPITests')">
+            <h3>рџ”Њ API С‚РµСЃС‚С‹</h3>
+            <p>РџСЂРѕРІРµСЂРєР° API СЌРЅРґРїРѕРёРЅС‚РѕРІ</p>
+            <div id="status-NewSystemAPITests" class="status">РќРµ Р·Р°РїСѓС‰РµРЅ</div>
+        </div>
+    </div>
+
+    <div id="all_systems" class="tab-content">
+        <button class="run-all-btn" onclick="runAllSystems()">Р—Р°РїСѓСЃС‚РёС‚СЊ Р’РЎР• С‚РµСЃС‚С‹ Р’РЎР•РҐ СЃРёСЃС‚РµРј</button>
+        <div id="all-systems-status"></div>
+    </div>
+
+    <div id="output" class="output">РќР°Р¶РјРёС‚Рµ РЅР° С‚РµСЃС‚ РґР»СЏ Р·Р°РїСѓСЃРєР°...</div>
+</div>
+
+<script>
+let currentRunning = null;
+
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    event.target.classList.add('active');
+}
+
+async function runTestClass(system, testClass) {
+    if (currentRunning) { alert('РўРµСЃС‚ СѓР¶Рµ РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ'); return; }
+
+    currentRunning = testClass;
+    updateStatus(testClass, 'running', 'Р’С‹РїРѕР»РЅСЏРµС‚СЃСЏ...');
+    document.getElementById('output').innerHTML = `Р—Р°РїСѓСЃРє ${testClass}...<div class="loading"></div>`;
+
+    try {
+        const response = await fetch('/run-tests/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ system: system, test_class: testClass })
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            updateStatus(testClass, 'passed', `РџСЂРѕР№РґРµРЅ (${result.tests_run} С‚РµСЃС‚РѕРІ)`);
+            document.getElementById('output').innerHTML = `<span class="success">РўР•РЎРўР« РџР РћР™Р”Р•РќР«</span><br>Р’С‹РїРѕР»РЅРµРЅРѕ: ${result.tests_run}<br>РћС€РёР±РѕРє: ${result.errors}<br>РџР°РґРµРЅРёР№: ${result.failures}`;
+        } else {
+            updateStatus(testClass, 'failed', 'РџСЂРѕРІР°Р»РµРЅ');
+            document.getElementById('output').innerHTML = `<span class="error">РўР•РЎРўР« РџР РћР’РђР›Р•РќР«</span><br>${result.error || ''}`;
+        }
+    } catch (error) {
+        updateStatus(testClass, 'failed', 'РћС€РёР±РєР°');
+        document.getElementById('output').innerHTML = `<span class="error">РћС€РёР±РєР°: ${error}</span>`;
+    } finally { currentRunning = null; }
+}
+
+async function runSystemTests(system) {
+    if (currentRunning) { alert('РўРµСЃС‚ СѓР¶Рµ РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ'); return; }
+    currentRunning = system;
+    document.getElementById('output').innerHTML = `Р—Р°РїСѓСЃРє СЃРёСЃС‚РµРјС‹ ${system}...<div class="loading"></div>`;
+
+    try {
+        const response = await fetch('/run-tests/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ system: system })
+        });
+        const result = await response.json();
+        document.getElementById('output').innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+    } catch (error) {
+        document.getElementById('output').innerHTML = `<span class="error">РћС€РёР±РєР°: ${error}</span>`;
+    } finally { currentRunning = null; }
+}
+
+async function runAllSystems() {
+    if (currentRunning) { alert('РўРµСЃС‚ СѓР¶Рµ РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ'); return; }
+    currentRunning = 'all';
+    document.getElementById('output').innerHTML = `Р—Р°РїСѓСЃРє РІСЃРµС… СЃРёСЃС‚РµРј...<div class="loading"></div>`;
+
+    try {
+        const response = await fetch('/run-tests/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ system: 'all' })
+        });
+        const result = await response.json();
+        document.getElementById('output').innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+    } catch (error) {
+        document.getElementById('output').innerHTML = `<span class="error">РћС€РёР±РєР°: ${error}</span>`;
+    } finally { currentRunning = null; }
+}
+
+function updateStatus(testId, status, message) {
+    const el = document.getElementById(`status-${testId}`);
+    if (el) { el.className = `status ${status}`; el.textContent = message; }
+}
+</script>
+</body>
+</html>
+
+
+#smp_test.py
+import os, time, pytest, dotenv
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
+from driverChrome import driver_chrome
+
+# Р—Р°РіСЂСѓР¶Р°РµРј РїРµСЂРµРјРµРЅРЅС‹Рµ РѕРєСЂСѓР¶РµРЅРёСЏ
+dotenv.load_dotenv()
+login = os.environ.get('LOGIN')
+password = os.environ.get('PASSWORD')
+
+def test_authorization(driver_chrome):
+    """РўРµСЃС‚ Р°РІС‚РѕСЂРёР·Р°С†РёРё"""
+    driver = driver_chrome
+    wait = WebDriverWait(driver, 10)
+    url = f"http://{login}:{password}@vc-stat-s19:8084/"
+    driver.get(url)
+    time.sleep(10)
+
+    assert driver.current_url is not None
