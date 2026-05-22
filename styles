@@ -3,21 +3,52 @@ os.environ['PLAYWRIGHT_BROWSERS_PATH'] = r"C:\Users\chembrovich_ev\AppData\Local
 
 import asyncio
 import pytest
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, expect
+from tests.core.driver import browser, pw
 
 @pytest.mark.asyncio
+async def test_async_work():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        page = await browser.new_page()
+        await page.goto('http://q-web-open/')
+        personal_link = page.locator("a:text('Р›РёС‡РЅС‹Р№'), a[href='/Authenticate']")
+        await expect(personal_link).to_be_visible().click()
+        fiz_cabinet = page.locator("a[href='/AuthenticateLegal']")
+        await expect(fiz_cabinet).to_be_visible().click()
+        el_name = page.locator("#USBToken")
+        await expect(el_name).to_be_visible()
+
+        await browser.close()
+
+
+
+
+driver.py
+import os
+os.environ['PLAYWRIGHT_BROWSERS_PATH'] = r"C:\Users\chembrovich_ev\AppData\Local\ms-playwright\chrome-win64"
+
+import asyncio
+import pytest
+from playwright.async_api import async_playwright
+
+
 @pytest.fixture(scope="session")
-async def playwright():
+async def pw():
     async with async_playwright() as p:
         yield p
 
-@pytest.mark.asyncio
 @pytest.fixture(scope="session")
-async def browser(playwright):
-    browser = playwright.chromium.launch(headless= False)
+async def browser(pw):
+    browser = await pw.chromium.launch(headless= False)
     yield browser
-    browser.close()
+    await browser.close()
 
+
+test_for_pw.py
+import os
+import pytest
+from tests.core.driver import browser, pw
 @pytest.mark.asyncio
 async def test_async_work(browser):
     page = await browser.new_page()
