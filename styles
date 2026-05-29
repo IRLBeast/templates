@@ -1,56 +1,158 @@
-import os
-os.environ['PLAYWRIGHT_BROWSERS_PATH'] = r"C:\Users\chembrovich_ev\AppData\Local\ms-playwright\chrome-win64"
+index.html
 
-import asyncio
-import pytest
-from playwright.async_api import async_playwright, expect
-from tests.core.driver import browser, pw
+<ul class="ks-cboxtags">
 
-@pytest.mark.asyncio
-async def test_async_work():
-    async with async_playwright() as p:
-        browser = await p.chromium.launch()
-        page = await browser.new_page()
-        await page.goto('http://q-web-open/')
-        personal_link = page.locator("a:text('Р›РёС‡РЅС‹Р№'), a[href='/Authenticate']")
-        await expect(personal_link).to_be_visible().click()
-        fiz_cabinet = page.locator("a[href='/AuthenticateLegal']")
-        await expect(fiz_cabinet).to_be_visible().click()
-        el_name = page.locator("#USBToken")
-        await expect(el_name).to_be_visible()
+    <li>
+        <input type="checkbox" id="kr_legal" value="kr_legal">
+        <label for="kr_legal">Credit Register - Legal Users</label>
+    </li>
 
-        await browser.close()
+    <li>
+        <input type="checkbox" id="kr_reports" value="kr_reports">
+        <label for="kr_reports">Credit Register - Reports</label>
+    </li>
 
+    <li>
+        <input type="checkbox" id="smp_login" value="smp_login">
+        <label for="smp_login">SMP Login</label>
+    </li>
 
+</ul>
 
+<button onclick="runSelectedTests()">
+    Run tests
+</button>
 
-driver.py
-import os
-os.environ['PLAYWRIGHT_BROWSERS_PATH'] = r"C:\Users\chembrovich_ev\AppData\Local\ms-playwright\chrome-win64"
-
-import asyncio
-import pytest
-from playwright.async_api import async_playwright
+<pre id="output"></pre>
 
 
-@pytest.fixture(scope="session")
-async def pw():
-    async with async_playwright() as p:
-        yield p
+<script>
 
-@pytest.fixture(scope="session")
-async def browser(pw):
-    browser = await pw.chromium.launch(headless= False)
-    yield browser
-    await browser.close()
+function runSelectedTests() {
+
+    const selected = [];
+
+    document.querySelectorAll(
+        ".ks-cboxtags input:checked"
+    ).forEach(cb => {
+        selected.push(cb.value);
+    });
+
+    if (selected.length === 0) {
+        alert("Select at least one test");
+        return;
+    }
+
+    document.getElementById("output").textContent =
+        "Running tests...";
+
+    fetch("/run-tests/", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+            tests: selected
+        })
+
+    })
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        let output = "";
+
+        if (data.text_report) {
+            output += data.text_report;
+        }
+
+        if (data.stderr) {
+            output += "\n\nERRORS:\n" + data.stderr;
+        }
+
+        document.getElementById("output").textContent = output;
+    });
+}
+
+</script>
 
 
-test_for_pw.py
-import os
-import pytest
-from tests.core.driver import browser, pw
-@pytest.mark.asyncio
-async def test_async_work(browser):
-    page = await browser.new_page()
-    await page.goto('http://q-web-open/')
-    await page.click("a[href='/Personal']")
+urls.py
+from tests_manager.views import run_tests
+
+urlpatterns = [
+    path('', index),
+    path('run-tests/', run_tests),
+]
+
+
+views.py
+import json
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+from .services.runner import run_pytest
+
+
+@csrf_exempt
+def run_tests(request):
+
+    data = json.loads(request.body)
+
+    selected_tests = data.get("tests", [])
+
+    result = run_pytest(selected_tests)
+
+    return JsonResponse(result)
+
+
+runner.py
+import subprocess
+
+
+TESTS_MAP = {
+
+    "kr_legal":
+        "tests/credit_register/test_legal_users.py",
+
+    "kr_reports":
+        "tests/credit_register/test_reports.py",
+
+    "smp_login":
+        "tests/smp/test_login.py",
+}
+
+
+def run_pytest(test_names):
+
+    selected_paths = []
+
+    for test_name in test_names:
+
+        if test_name in TESTS_MAP:
+            selected_paths.append(
+                TESTS_MAP[test_name]
+            )
+
+    command = [
+        "pytest",
+        *selected_paths,
+        "-v"
+    ]
+
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True
+    )
+
+    return {
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+        "text_report": result.stdout
+    }
