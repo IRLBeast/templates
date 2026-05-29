@@ -98,25 +98,3 @@ def build_text_report(report_data):
         )
 
     return "\n".join(lines)
-
-
-
-views.py
-import json
-
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-
-from .services.runner import run_pytest
-
-
-@csrf_exempt
-def run_tests(request):
-
-    data = json.loads(request.body)
-
-    selected_tests = data.get("tests", [])
-
-    result = run_pytest(selected_tests)
-
-    return JsonResponse(result)
