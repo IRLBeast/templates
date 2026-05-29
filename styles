@@ -94,7 +94,7 @@ def build_text_report(report_data):
         outcome = test.get("outcome", "unknown")
 
         lines.append(
-            f"- {nodeid} → {outcome.upper()}"
+            f"- {nodeid} - {outcome.upper()}"
         )
 
     return "\n".join(lines)
