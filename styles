@@ -1,93 +1,104 @@
-index.html
-
-<ul class="ks-cboxtags">
-
-    <li>
-        <input type="checkbox" id="kr_legal" value="kr_legal">
-        <label for="kr_legal">Credit Register - Legal Users</label>
-    </li>
-
-    <li>
-        <input type="checkbox" id="kr_reports" value="kr_reports">
-        <label for="kr_reports">Credit Register - Reports</label>
-    </li>
-
-    <li>
-        <input type="checkbox" id="smp_login" value="smp_login">
-        <label for="smp_login">SMP Login</label>
-    </li>
-
-</ul>
-
-<button onclick="runSelectedTests()">
-    Run tests
-</button>
-
-<pre id="output"></pre>
+import subprocess
+import uuid
+import os
+import json
 
 
-<script>
+TESTS_MAP = {
 
-function runSelectedTests() {
+    "kr_legal":
+        "tests/credit_register/test_legal_users.py",
 
-    const selected = [];
+    "kr_reports":
+        "tests/credit_register/test_reports.py",
 
-    document.querySelectorAll(
-        ".ks-cboxtags input:checked"
-    ).forEach(cb => {
-        selected.push(cb.value);
-    });
-
-    if (selected.length === 0) {
-        alert("Select at least one test");
-        return;
-    }
-
-    document.getElementById("output").textContent =
-        "Running tests...";
-
-    fetch("/run-tests/", {
-
-        method: "POST",
-
-        headers: {
-            "Content-Type": "application/json",
-        },
-
-        body: JSON.stringify({
-            tests: selected
-        })
-
-    })
-
-    .then(res => res.json())
-
-    .then(data => {
-
-        let output = "";
-
-        if (data.text_report) {
-            output += data.text_report;
-        }
-
-        if (data.stderr) {
-            output += "\n\nERRORS:\n" + data.stderr;
-        }
-
-        document.getElementById("output").textContent = output;
-    });
+    "smp_login":
+        "tests/smp/test_login.py",
 }
 
-</script>
+
+def run_pytest(test_names):
+
+    run_id = str(uuid.uuid4())
+
+    report_file = f"reports/{run_id}.json"
+
+    os.makedirs("reports", exist_ok=True)
+
+    selected_paths = []
+
+    for test_name in test_names:
+
+        if test_name in TESTS_MAP:
+            selected_paths.append(
+                TESTS_MAP[test_name]
+            )
+
+    if not selected_paths:
+        return {
+            "error": "No valid tests selected"
+        }
+
+    command = [
+        "pytest",
+        *selected_paths,
+        "-v",
+        "--json-report",
+        f"--json-report-file={report_file}"
+    ]
+
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True
+    )
+
+    report_data = {}
+
+    if os.path.exists(report_file):
+
+        with open(report_file, "r", encoding="utf-8") as f:
+            report_data = json.load(f)
+
+    text_report = build_text_report(report_data)
+
+    return {
+        "run_id": run_id,
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+        "report": report_data,
+        "text_report": text_report
+    }
 
 
-urls.py
-from tests_manager.views import run_tests
+def build_text_report(report_data):
 
-urlpatterns = [
-    path('', index),
-    path('run-tests/', run_tests),
-]
+    summary = report_data.get("summary", {})
+
+    tests = report_data.get("tests", [])
+
+    lines = []
+
+    lines.append("TEST RESULTS\n")
+
+    lines.append(f"Passed: {summary.get('passed', 0)}")
+    lines.append(f"Failed: {summary.get('failed', 0)}")
+    lines.append(f"Skipped: {summary.get('skipped', 0)}")
+
+    lines.append("\nDETAILS:")
+
+    for test in tests:
+
+        nodeid = test.get("nodeid", "unknown")
+
+        outcome = test.get("outcome", "unknown")
+
+        lines.append(
+            f"- {nodeid} → {outcome.upper()}"
+        )
+
+    return "\n".join(lines)
+
 
 
 views.py
@@ -109,50 +120,3 @@ def run_tests(request):
     result = run_pytest(selected_tests)
 
     return JsonResponse(result)
-
-
-runner.py
-import subprocess
-
-
-TESTS_MAP = {
-
-    "kr_legal":
-        "tests/credit_register/test_legal_users.py",
-
-    "kr_reports":
-        "tests/credit_register/test_reports.py",
-
-    "smp_login":
-        "tests/smp/test_login.py",
-}
-
-
-def run_pytest(test_names):
-
-    selected_paths = []
-
-    for test_name in test_names:
-
-        if test_name in TESTS_MAP:
-            selected_paths.append(
-                TESTS_MAP[test_name]
-            )
-
-    command = [
-        "pytest",
-        *selected_paths,
-        "-v"
-    ]
-
-    result = subprocess.run(
-        command,
-        capture_output=True,
-        text=True
-    )
-
-    return {
-        "stdout": result.stdout,
-        "stderr": result.stderr,
-        "text_report": result.stdout
-    }
