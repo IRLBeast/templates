@@ -1,100 +1,56 @@
-import subprocess
-import uuid
-import os
-import json
+def get_latest_confirmation_code(api_url="http://10.2.9.125:8001/TestApi/GetSentMessagesInfo"):
+    try:
+        response = requests.post(api_url, timeout=10)
+        response.raise_for_status()
+        
+        messages = response.json()
+        
+        if not messages:
+            raise ValueError("no messages")
+        
+        last_message = messages[-1]
+        
+        message_text = last_message["message"]
+        
+        import re
+        code_match = re.search(r'(\d{4})', message_text)
+        
+        if code_match:
+            confirmation_code = code_match.group(1)
+            return confirmation_code
+        else:
+            return None
+            
+    except requests.exceptions.RequestException as e:
+        print(f"err to Рє API: {e}")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"JSON err: {e}")
+        return None
+    except Exception as e:
+        print(f"other err: {e}")
+        return None
 
+def handle_session_modal_advanced(driver):
 
-TESTS_MAP = {
-
-    "kr_legal":
-        "tests/credit_register/test_legal_users.py",
-
-    "kr_reports":
-        "tests/credit_register/test_reports.py",
-
-    "smp_login":
-        "tests/smp/test_login.py",
-}
-
-
-def run_pytest(test_names):
-
-    run_id = str(uuid.uuid4())
-
-    report_file = f"reports/{run_id}.json"
-
-    os.makedirs("reports", exist_ok=True)
-
-    selected_paths = []
-
-    for test_name in test_names:
-
-        if test_name in TESTS_MAP:
-            selected_paths.append(
-                TESTS_MAP[test_name]
-            )
-
-    if not selected_paths:
-        return {
-            "error": "No valid tests selected"
-        }
-
-    command = [
-        "pytest",
-        *selected_paths,
-        "-v",
-        "--json-report",
-        f"--json-report-file={report_file}"
-    ]
-
-    result = subprocess.run(
-        command,
-        capture_output=True,
-        text=True
-    )
-
-    report_data = {}
-
-    if os.path.exists(report_file):
-
-        with open(report_file, "r", encoding="utf-8") as f:
-            report_data = json.load(f)
-
-    text_report = build_text_report(report_data)
-
-    return {
-        "run_id": run_id,
-        "stdout": result.stdout,
-        "stderr": result.stderr,
-        "report": report_data,
-        "text_report": text_report
-    }
-
-
-def build_text_report(report_data):
-
-    summary = report_data.get("summary", {})
-
-    tests = report_data.get("tests", [])
-
-    lines = []
-
-    lines.append("TEST RESULTS\n")
-
-    lines.append(f"Passed: {summary.get('passed', 0)}")
-    lines.append(f"Failed: {summary.get('failed', 0)}")
-    lines.append(f"Skipped: {summary.get('skipped', 0)}")
-
-    lines.append("\nDETAILS:")
-
-    for test in tests:
-
-        nodeid = test.get("nodeid", "unknown")
-
-        outcome = test.get("outcome", "unknown")
-
-        lines.append(
-            f"- {nodeid} - {outcome.upper()}"
+    max_wait = 3
+    
+    try:
+        WebDriverWait(driver, max_wait).until(
+            EC.text_to_be_present_in_element((By.TAG_NAME, "body"), 
+                                           "already in system")
         )
-
-    return "\n".join(lines)
+        
+        
+        annul_button = driver.find_element(By.ID, "form-popup-confirm")
+        annul_button.click()
+        print("pressed button 'annul'")
+        
+        return True
+        
+    except TimeoutException:
+        print(f"no window appeared in {max_wait} sec")
+        return False
+    except Exception as e:
+        print(f"other err: {e}")
+        return False
