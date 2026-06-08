@@ -1,28 +1,61 @@
-TEST RESULTS
+def build_text_report(report_data):
 
-Passed: 1
-Failed: 0
-Skipped: 0
+    summary = report_data.get("summary", {})
+    tests = report_data.get("tests", [])
 
-DETAILS:
-- tests/isip/test_isip.py::test_get_pass_exp - PASSED
+    lines = []
 
-LOGS:
-============================= test session starts =============================
-platform win32 -- Python 3.13.9, pytest-9.0.3, pluggy-1.6.0 -- D:\autotest\.venv\Scripts\python.exe
-cachedir: .pytest_cache
-metadata: {'Python': '3.13.9', 'Platform': 'Windows-10-10.0.19041-SP0', 'Packages': {'pytest': '9.0.3', 'pluggy': '1.6.0'}, 'Plugins': {'allure-pytest': '2.16.0', 'asyncio': '1.3.0', 'base-url': '2.1.0', 'json-report': '1.5.0', 'metadata': '3.1.1', 'playwright': '0.8.0'}, 'Base URL': ''}
-rootdir: D:\autotest
-configfile: pytest.ini
-plugins: allure-pytest-2.16.0, asyncio-1.3.0, base-url-2.1.0, json-report-1.5.0, metadata-3.1.1, playwright-0.8.0
-asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
-collecting ... collected 1 item
+    lines.append("TEST RESULTS\n")
 
-tests/isip/test_isip.py::test_get_pass_exp PASSED                        [100%]
+    lines.append(f"Passed: {summary.get('passed', 0)}")
+    lines.append(f"Failed: {summary.get('failed', 0)}")
+    lines.append(f"Skipped: {summary.get('skipped', 0)}")
 
---------------------------------- JSON report ---------------------------------
-report saved to: reports/159b83a7-9bb8-4915-8daa-d070f582f4d5.json
-============================== 1 passed in 0.24s ==============================
+    lines.append("\nDETAILS:\n")
 
-{"created": 1780923941.853771, "duration": 0.24025630950927734, "exitcode": 0, "root": "D:\\autotest", "environment": {}, "summary": {"passed": 1, "total": 1, "collected": 1}, "collectors": [{"nodeid": "", "outcome": "passed", "result": [{"nodeid": "tests/isip/test_isip.py::test_get_pass_exp", "type": "Function", "lineno": 4}]}], "tests": [{"nodeid": "tests/isip/test_isip.py::test_get_pass_exp", "lineno": 4, "outcome": "passed", "keywords": ["test_get_pass_exp", "test_isip.py", "isip", "tests", "autotest", ""], "setup": {"duration": 0.002113299909979105, "outcome": "passed"}, "call": {"duration": 0.05832029995508492, "outcome": "passed", "stdout": "\n 2026-12-15 08:00:00\n"}, "teardown": {"duration": 0.0004016999155282974, "outcome": "passed"}}]}
+    for test in tests:
 
+        nodeid = test.get("nodeid", "unknown")
+        outcome = test.get("outcome", "unknown").upper()
+
+        lines.append(f"{nodeid}")
+        lines.append(f"RESULT: {outcome}")
+
+        call = test.get("call", {})
+        stdout = call.get("stdout", "").strip()
+
+        if stdout:
+            lines.append("LOGS:")
+            lines.append(stdout)
+
+        lines.append("-" * 60)
+
+    return "\n".join(lines)
+
+
+___________
+.then(data => {
+
+    let output = "";
+
+    if (data.text_report) {
+        output += data.text_report;
+    }
+
+    if (data.stderr) {
+        output += "\n\nERRORS:\n";
+        output += data.stderr;
+    }
+
+    document.getElementById("output").textContent = output;
+});
+
+________
+
+if outcome == "FAILED":
+
+    longrepr = call.get("longrepr")
+
+    if longrepr:
+        lines.append("ERROR:")
+        lines.append(str(longrepr))
