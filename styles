@@ -1,36 +1,92 @@
-from playwright.sync_api import TimeoutError
+<script>
+
+function runSelectedTests() {
+
+    const selected = [];
+
+    document.querySelectorAll(
+        ".ks-cboxtags input:checked"
+    ).forEach(cb => {
+        selected.push(cb.value);
+    });
+
+    if (selected.length === 0) {
+        alert("Select at least one test");
+        return;
+    }
+
+    document.getElementById("output").textContent =
+        "Running tests...";
+
+    fetch("/run-tests/", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+            tests: selected
+        })
+
+    })
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        let output = "";
+
+        if (data.text_report) {
+            output += data.text_report;
+        }
+
+        if (data.stderr) {
+            output += "\n\nERRORS:\n" + data.stderr;
+        }
+
+        document.getElementById("output").textContent = output;
+    });
+}
+
+</script>
 
 
-def handle_session_modal(page):
 
-    try:
-        page.get_by_text(
-            "already in system",
-            exact=False
-        ).wait_for(timeout=3000)
 
-        page.locator("#form-popup-confirm").click()
+<script>
+function copyReport() {
+    const text = document.getElementById("output").textContent;
+    navigator.clipboard.writeText(text);
+}
+</script>
 
-        print("Pressed 'annul' button")
+<script>
+function runTest(testName) {
+    document.getElementById("output").textContent = "Running test...";
 
-        return True
+    fetch(`/run-test/?test=${testName}`)
+        .then(res => res.json())
+        .then(data => {
+            let output = "";
 
-    except TimeoutError:
-        print("Modal did not appear")
+            if (data.text_report) {
+                output += data.text_report;
+            }
 
-        return False
+            if (data.stderr) {
+                output += "\n\nERRORS:\n" + data.stderr;
+            }
 
-    except Exception as e:
-        print(f"Unexpected error: {e}")
+            if (data.stdout) {
+                output += "\n\nLOGS:\n" + data.stdout;
+            }
 
-        return False
-
-----------
-handle_session_modal(page)
-
--------
-code = get_latest_confirmation_code()
-
-assert code is not None
-
-page.fill("#confirmationCode", code)
+            document.getElementById("output").textContent = output;
+        })
+        .catch(err => {
+            document.getElementById("output").textContent = "Error: " + err;
+        });
+}
+</script>
