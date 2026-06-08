@@ -1,92 +1,28 @@
-<script>
+TEST RESULTS
 
-function runSelectedTests() {
+Passed: 1
+Failed: 0
+Skipped: 0
 
-    const selected = [];
+DETAILS:
+- tests/isip/test_isip.py::test_get_pass_exp - PASSED
 
-    document.querySelectorAll(
-        ".ks-cboxtags input:checked"
-    ).forEach(cb => {
-        selected.push(cb.value);
-    });
+LOGS:
+============================= test session starts =============================
+platform win32 -- Python 3.13.9, pytest-9.0.3, pluggy-1.6.0 -- D:\autotest\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+metadata: {'Python': '3.13.9', 'Platform': 'Windows-10-10.0.19041-SP0', 'Packages': {'pytest': '9.0.3', 'pluggy': '1.6.0'}, 'Plugins': {'allure-pytest': '2.16.0', 'asyncio': '1.3.0', 'base-url': '2.1.0', 'json-report': '1.5.0', 'metadata': '3.1.1', 'playwright': '0.8.0'}, 'Base URL': ''}
+rootdir: D:\autotest
+configfile: pytest.ini
+plugins: allure-pytest-2.16.0, asyncio-1.3.0, base-url-2.1.0, json-report-1.5.0, metadata-3.1.1, playwright-0.8.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
 
-    if (selected.length === 0) {
-        alert("Select at least one test");
-        return;
-    }
+tests/isip/test_isip.py::test_get_pass_exp PASSED                        [100%]
 
-    document.getElementById("output").textContent =
-        "Running tests...";
+--------------------------------- JSON report ---------------------------------
+report saved to: reports/159b83a7-9bb8-4915-8daa-d070f582f4d5.json
+============================== 1 passed in 0.24s ==============================
 
-    fetch("/run-tests/", {
+{"created": 1780923941.853771, "duration": 0.24025630950927734, "exitcode": 0, "root": "D:\\autotest", "environment": {}, "summary": {"passed": 1, "total": 1, "collected": 1}, "collectors": [{"nodeid": "", "outcome": "passed", "result": [{"nodeid": "tests/isip/test_isip.py::test_get_pass_exp", "type": "Function", "lineno": 4}]}], "tests": [{"nodeid": "tests/isip/test_isip.py::test_get_pass_exp", "lineno": 4, "outcome": "passed", "keywords": ["test_get_pass_exp", "test_isip.py", "isip", "tests", "autotest", ""], "setup": {"duration": 0.002113299909979105, "outcome": "passed"}, "call": {"duration": 0.05832029995508492, "outcome": "passed", "stdout": "\n 2026-12-15 08:00:00\n"}, "teardown": {"duration": 0.0004016999155282974, "outcome": "passed"}}]}
 
-        method: "POST",
-
-        headers: {
-            "Content-Type": "application/json",
-        },
-
-        body: JSON.stringify({
-            tests: selected
-        })
-
-    })
-
-    .then(res => res.json())
-
-    .then(data => {
-
-        let output = "";
-
-        if (data.text_report) {
-            output += data.text_report;
-        }
-
-        if (data.stderr) {
-            output += "\n\nERRORS:\n" + data.stderr;
-        }
-
-        document.getElementById("output").textContent = output;
-    });
-}
-
-</script>
-
-
-
-
-<script>
-function copyReport() {
-    const text = document.getElementById("output").textContent;
-    navigator.clipboard.writeText(text);
-}
-</script>
-
-<script>
-function runTest(testName) {
-    document.getElementById("output").textContent = "Running test...";
-
-    fetch(`/run-test/?test=${testName}`)
-        .then(res => res.json())
-        .then(data => {
-            let output = "";
-
-            if (data.text_report) {
-                output += data.text_report;
-            }
-
-            if (data.stderr) {
-                output += "\n\nERRORS:\n" + data.stderr;
-            }
-
-            if (data.stdout) {
-                output += "\n\nLOGS:\n" + data.stdout;
-            }
-
-            document.getElementById("output").textContent = output;
-        })
-        .catch(err => {
-            document.getElementById("output").textContent = "Error: " + err;
-        });
-}
-</script>
