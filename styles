@@ -1,61 +1,79 @@
-def build_text_report(report_data):
+import requests
+import json
+import re
 
-    summary = report_data.get("summary", {})
-    tests = report_data.get("tests", [])
 
-    lines = []
+def get_latest_confirmation_code(
+    api_url="http://10.2.9.125:8001/TestApi/GetSentMessagesInfo"
+):
+    try:
+        response = requests.post(api_url, timeout=10)
+        response.raise_for_status()
 
-    lines.append("TEST RESULTS\n")
+        messages = response.json()
 
-    lines.append(f"Passed: {summary.get('passed', 0)}")
-    lines.append(f"Failed: {summary.get('failed', 0)}")
-    lines.append(f"Skipped: {summary.get('skipped', 0)}")
+        if not messages:
+            raise ValueError("No messages found")
 
-    lines.append("\nDETAILS:\n")
+        last_message = messages[-1]
+        message_text = last_message["message"]
 
-    for test in tests:
+        code_match = re.search(r"(\d{4})", message_text)
 
-        nodeid = test.get("nodeid", "unknown")
-        outcome = test.get("outcome", "unknown").upper()
+        if code_match:
+            return code_match.group(1)
 
-        lines.append(f"{nodeid}")
-        lines.append(f"RESULT: {outcome}")
+        return None
 
-        call = test.get("call", {})
-        stdout = call.get("stdout", "").strip()
+    except requests.exceptions.RequestException as e:
+        print(f"API error: {e}")
+        return None
 
-        if stdout:
-            lines.append("LOGS:")
-            lines.append(stdout)
+    except json.JSONDecodeError as e:
+        print(f"JSON error: {e}")
+        return None
 
-        lines.append("-" * 60)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        return None
 
-    return "\n".join(lines)
+_____________
 
+code = get_latest_confirmation_code()
+
+assert code is not None
+
+page.fill("#confirmationCode", code)
 
 ___________
-.then(data => {
 
-    let output = "";
+from playwright.sync_api import TimeoutError
 
-    if (data.text_report) {
-        output += data.text_report;
-    }
 
-    if (data.stderr) {
-        output += "\n\nERRORS:\n";
-        output += data.stderr;
-    }
+def handle_session_modal(page):
 
-    document.getElementById("output").textContent = output;
-});
+    try:
+        page.get_by_text(
+            "already in system",
+            exact=False
+        ).wait_for(timeout=3000)
 
-________
+        page.locator("#form-popup-confirm").click()
 
-if outcome == "FAILED":
+        print("Pressed 'annul' button")
 
-    longrepr = call.get("longrepr")
+        return True
 
-    if longrepr:
-        lines.append("ERROR:")
-        lines.append(str(longrepr))
+    except TimeoutError:
+        print("Modal did not appear")
+
+        return False
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+
+        return False
+
+______
+
+handle_session_modal(page)
