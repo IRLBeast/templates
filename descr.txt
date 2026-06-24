@@ -1,20 +1,3 @@
-def pay_order(page: Page, order_number: str):
-    # Сохраняем основную страницу
-    main_page = page
-    
-    # Открываем новую вкладку
-    new_page = page.context.new_page()
-    
-    # Переходим по ссылке оплаты
-    new_page.goto("https://ваш-сайт.ру/оплата")
-    
-    # Работаем на новой странице
-    new_page.locator('input[name="nomer"]').fill(order_number)
-    new_page.locator('button[type="submit"]').click()
-    new_page.locator('text=Оплачено').wait_for(timeout=10000)
-    
-    # Закрываем вкладку оплаты
-    new_page.close()
-    
-    # Возвращаем фокус на основную страницу
-    main_page.bring_to_front()
+# Находим элемент с текстом, берём следующий span
+text_element = page.locator('text="Ваш номер заказа"')
+order_number = text_element.locator('xpath=following-sibling::span').text_content().strip()
