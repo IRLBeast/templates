@@ -1,79 +1,13 @@
-import requests
-import json
-import re
+def test_get_pass_exp():
+    headers = {
+               "username": "dGVzdHVzZXI=", #testuser
+               "password": "dGVzdHVzZXIxMjNR" #testuser123Q
+               }
 
+    response = requests.get(
+        f"{base_url}/login",
+        headers=headers,
+    )
 
-def get_latest_confirmation_code(
-    api_url="http://10.2.9.125:8001/TestApi/GetSentMessagesInfo"
-):
-    try:
-        response = requests.post(api_url, timeout=10)
-        response.raise_for_status()
-
-        messages = response.json()
-
-        if not messages:
-            raise ValueError("No messages found")
-
-        last_message = messages[-1]
-        message_text = last_message["message"]
-
-        code_match = re.search(r"(\d{4})", message_text)
-
-        if code_match:
-            return code_match.group(1)
-
-        return None
-
-    except requests.exceptions.RequestException as e:
-        print(f"API error: {e}")
-        return None
-
-    except json.JSONDecodeError as e:
-        print(f"JSON error: {e}")
-        return None
-
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        return None
-
-_____________
-
-code = get_latest_confirmation_code()
-
-assert code is not None
-
-page.fill("#confirmationCode", code)
-
-___________
-
-from playwright.sync_api import TimeoutError
-
-
-def handle_session_modal(page):
-
-    try:
-        page.get_by_text(
-            "already in system",
-            exact=False
-        ).wait_for(timeout=3000)
-
-        page.locator("#form-popup-confirm").click()
-
-        print("Pressed 'annul' button")
-
-        return True
-
-    except TimeoutError:
-        print("Modal did not appear")
-
-        return False
-
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-
-        return False
-
-______
-
-handle_session_modal(page)
+    print(response.status_code)
+    print('\n', response.text)
