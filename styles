@@ -1,3 +1,13 @@
-<label class="dx-field-item-label dx-field-item-label-location-left" for="dx_dx-47154369-7214-cba4-e525-21dfee9b49dd_CorrectLegalAllName_specified" id="dx-label-e94f1af9-4750-1bdc-db31-57d9ccc225b6"><span class="dx-field-item-label-content" style="width: 215px;"><span class="dx-field-item-label-text">РџРѕР»РЅРѕРµ РЅР°РёРјРµРЅРѕРІР°РЅРёРµ:</span></span></label>
-<div class="dx-field-item-content dx-field-item-content-location-right"><div class="dx-show-invalid-badge dx-checkbox dx-widget" role="checkbox" aria-checked="false" tabindex="0" aria-labelledby="dx-label-e94f1af9-4750-1bdc-db31-57d9ccc225b6" aria-required="false" style="width: 60%;"><input type="hidden" value="false" name="CorrectLegalAllName_specified"><div class="dx-checkbox-container"><span class="dx-checkbox-icon"></span></div></div></div>
-<div class="dx-checkbox-container"><span class="dx-checkbox-icon"></span></div>
+def set_dx_checkbox(page, label: str, checked=True):
+    checkbox = page.get_by_role("checkbox", name=label)
+
+    current = checkbox.get_attribute("aria-checked") == "true"
+    if current != checked:
+        checkbox.click()
+
+
+set_dx_checkbox(page, "Полное наименование:")
+page.get_by_role("textbox", name="Полное наименование:").fill(new_name)
+
+set_dx_checkbox(page, "Основная информация о компании")
+page.get_by_role("textbox", name="Основная информация о компании").fill(company_name)
