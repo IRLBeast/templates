@@ -1,5 +1,9 @@
-<div class="dx-item dx-accordion-item dx-item-selected dx-accordion-item-opened" role="tab" aria-selected="true" style="transition: none;" id="dx-7b83e8ca-2ab4-62bc-1d71-738622aa0e3e">
-<div class="dx-item-content dx-accordion-item-title">
-<div class="dx-accordion-item-title-caption">Общие сведения</div>
-</div>
-</div>
+def open_section(page, title):
+    section = page.locator(
+        f'.dx-accordion-item:has(.dx-accordion-item-title-caption:has-text("{title}"))'
+    )
+
+    classes = section.get_attribute("class") or ""
+
+    if "dx-accordion-item-opened" not in classes:
+        section.locator(".dx-accordion-item-title").click()
