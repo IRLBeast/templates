@@ -1,20 +1,38 @@
-import os
-import requests
-import base64
-from dotenv import load_dotenv
+{
+                itemType: "group",
+                colCount: 2,
+                items: [
+                    {
+                        itemType: "simple",
+                        dataField: "CorrectBusiness_specified",
+                        editorType: "dxCheckBox",
+                        editorOptions: {
+                            value: false,
+                            onValueChanged: function (e) {
+                                form.itemOption("CorrectBusiness", "visible", e.value);
+                                if (!e.value) {
+                                    generalInfoData.CorrectBusiness = null;
+                                }
+                            }
+                        },
+                        label: {
+                            location: 'left',
+                            text: "Main info about company"
+                        }
+                    },
+                    {
+                        itemType: "group",
+                        items: [
+                            {
+                                dataField: "CorrectBusiness",
+                                editorType: "dxTextBox",
+                                visible: false,
+                                label: {
+                                    visible: false
+                                }
+                            }
+                        ]
+                    }
+                ]
 
-load_dotenv()
-
-def test_get_pass_exp():
-    headers = {
-        "username": base64.b64encode(os.getenv("USERNAME").encode()).decode(),
-        "password": base64.b64encode(os.getenv("PASSWORD").encode()).decode()
-    }
-    
-    response = requests.get(
-        f"{os.getenv('BASE_URL')}/login",
-        headers=headers,
-    )
-    
-    print(response.status_code)
-    print('\n', response.text)
+            },
