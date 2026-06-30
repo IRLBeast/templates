@@ -1,13 +1,39 @@
-def set_dx_checkbox(page, label: str, checked=True):
-    checkbox = page.get_by_role("checkbox", name=label)
+    $(function () {
 
-    current = checkbox.get_attribute("aria-checked") == "true"
-    if current != checked:
-        checkbox.click()
+        var accordionData = [];
+        var now = new Date();
 
+        accordionData.push({
+            title: "Общие сведения",
+            data: '<table><tr><th style="width: 360px"></th><th style="width: 115px">Отметьте,<br>где ошибка</th><th>Укажите достоверные сведения,<br>на которые надо заменить</th></tr></table><div id="general"></div>'
+        });
 
-set_dx_checkbox(page, "Полное наименование:")
-page.get_by_role("textbox", name="Полное наименование:").fill(new_name)
+        accordionData.push({
+            title: "Сведения о кредитных сделках",
+            data: '<div id="addCreditDeal"></div><div id="creditDeals"></div>'
+        });
 
-set_dx_checkbox(page, "Основная информация о компании")
-page.get_by_role("textbox", name="Основная информация о компании").fill(company_name)
+        accordionData.push({
+            title: "Сведения о запросах пользователей (запросы без согласия субъекта кредитной истории)",
+            data: '<div id="addRequestHistory"></div><div id="requestHistory"></div>'
+        });
+
+        var accordion = $("#accordionContainer").dxAccordion({
+            dataSource: accordionData,
+            collapsible: true,
+            multiple: true,
+            itemTemplate: function (itemData, itemIndex, itemElement) {
+                itemElement.append(itemData.data);
+            },
+
+            onContentReady: function (e) {
+
+                // для улучшения визуального отображения
+                setTimeout(function () {
+                    if (Object.keys(generalInfoData).length == 0) { e.component.collapseItem(0); }
+                    if (creditDealsData.length == 0) { e.component.collapseItem(1); }
+                    if (requestHistoryData.length == 0) { e.component.collapseItem(2); }
+                }, 1500);
+            }
+
+        }).dxAccordion("instance");
