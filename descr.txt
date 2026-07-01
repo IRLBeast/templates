@@ -1,19 +1,102 @@
-# test_api.py
-import os
-import requests
-import pytest
-from dotenv import load_dotenv
+def test_add_merchant(api):
+    payload = {
+        "id": 0,
+        "merchantName": "Pytest Merchant",
+        "merchantId": "pytest-001",
+        "idDescription": 1
+    }
 
-load_dotenv()
+    response = api.post(
+        "/merchant",
+        json=payload
+    )
 
-BASE_URL = os.getenv("BASE_URL")
-
-@pytest.fixture
-def auth():
-    """Возвращаем кортеж для Basic Auth"""
-    return (os.getenv("USERNAME"), os.getenv("PASSWORD"))
-
-def test_get_request(auth):
-    response = requests.get(BASE_URL, auth=auth)
     assert response.status_code == 200
-    print(f"Ответ: {response.text}")
+
+    body = response.json()
+
+    assert "merchants" in body
+
+    assert any(
+        merchant["merchantId"] == "pytest-001"
+        for merchant in body["merchants"]
+    )
+
+
+def test_delete_merchant(api):
+    payload = {
+        "id": 0,
+        "merchantName": "Delete Test",
+        "merchantId": "delete-test",
+        "idDescription": 1
+    }
+
+    response = api.post(
+        "/merchant",
+        json=payload
+    )
+
+    body = response.json()
+
+    merchant = next(
+        x for x in body["merchants"]
+        if x["merchantId"] == "delete-test"
+    )
+
+    response = api.delete(
+        "/merchant",
+        json=merchant
+    )
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert not any(
+        x["merchantId"] == "delete-test"
+        for x in body["merchants"]
+    )
+
+добавить в апи клиент метод:
+def change_password(self, username, password, new_password):
+    response = self.session.post(
+        f"{self.base_url}/changepassword",
+        headers={
+            "username": username,
+            "password": password,
+            "newpassword": new_password,
+            "Content-Length": "0"
+        },
+    )
+
+    response.raise_for_status()
+
+    self.token = response.json()["token"]
+
+    return response
+
+
+import os
+
+def test_change_password(api):
+    username = os.getenv("USERNAME")
+    old_password = os.getenv("PASSWORD")
+    new_password = "432109876573aZ"
+
+    try:
+        response = api.change_password(
+            username=username,
+            password=old_password,
+            new_password=new_password,
+        )
+
+        assert response.status_code == 200
+        assert "token" in response.json()
+
+    finally:
+        # Всегда пытаемся вернуть старый пароль
+        api.change_password(
+            username=username,
+            password=new_password,
+            new_password=old_password,
+        )
