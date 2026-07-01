@@ -1,60 +1,30 @@
-# conftest.py
-import os
-import requests
-import base64
-import pytest
-from dotenv import load_dotenv
+class AuthSession:
+    def __init__(self, token):
+        self.token = token
 
-load_dotenv()
+    @property
+    def headers(self):
+        return {
+            "Authorization": f"Bearer {self.token}"
+        }
+
 
 @pytest.fixture(scope="session")
-def api_session():
-    """Создаем сессию с автоматической авторизацией"""
-    session = requests.Session()
-    
-    # Логинимся и получаем токен
-    base_url = os.getenv("BASE_URL")
-    username = os.getenv("USERNAME")
-    password = os.getenv("PASSWORD")
-    
-    headers = {
-        "username": base64.b64encode(username.encode()).decode(),
-        "password": base64.b64encode(password.encode()).decode()
-    }
-    
-    response = session.get(f"{base_url}/login", headers=headers)
-    assert response.status_code == 200
-    
-    token = response.text
-    session.headers.update({
-        "Authorization": f"Bearer {token}",
-        "accept": "text/plain"
-    })
-    
-    print(f"\n✅ Сессия создана с токеном: {token[:20]}...")
-    return session
+def auth():
+    token = login()
+    return AuthSession(token)
 
 
-# test_api.py
-import requests
-
-def test_get_data(api_session, base_url):
-    """Сессия уже содержит токен в заголовках"""
-    response = api_session.get(f"{base_url}/api/data")
-    assert response.status_code == 200
-    print(response.text)
-
-def test_get_users(api_session, base_url):
-    """Токен автоматически подставляется"""
-    response = api_session.get(f"{base_url}/api/users")
-    assert response.status_code == 200
-    print(response.json())
-
-def test_create_item(api_session, base_url):
-    """Все запросы через одну сессию"""
-    new_item = {"name": "test", "price": 100}
-    response = api_session.post(
-        f"{base_url}/api/items",
-        json=new_item
+def test_users(auth):
+    response = requests.get(
+        f"{BASE_URL}/users",
+        headers=auth.headers,
     )
-    assert response.status_code == 201
+
+def test_refresh(auth):
+    response = requests.post(
+        f"{BASE_URL}/refresh",
+        headers=auth.headers,
+    )
+
+    auth.token = response.json()["token"]
