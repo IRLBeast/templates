@@ -1,6 +1,29 @@
-class AuthSession:
-    def __init__(self, token):
-        self.token = token
+import os
+import base64
+import requests
+
+
+class ApiClient:
+    def __init__(self):
+        self.base_url = os.getenv("BASE_URL")
+        self.session = requests.Session()
+        self.token = None
+
+    def login(self):
+        headers = {
+            "username": base64.b64encode(os.getenv("USERNAME").encode()).decode(),
+            "password": base64.b64encode(os.getenv("PASSWORD").encode()).decode(),
+        }
+
+        response = self.session.get(
+            f"{self.base_url}/login",
+            headers=headers,
+        )
+
+        response.raise_for_status()
+
+        self.token = response.json()["token"]
+        return self.token
 
     @property
     def headers(self):
@@ -8,23 +31,57 @@ class AuthSession:
             "Authorization": f"Bearer {self.token}"
         }
 
+    def get(self, endpoint, **kwargs):
+        return self.session.get(
+            f"{self.base_url}{endpoint}",
+            headers=self.headers,
+            **kwargs,
+        )
+
+    def post(self, endpoint, **kwargs):
+        return self.session.post(
+            f"{self.base_url}{endpoint}",
+            headers=self.headers,
+            **kwargs,
+        )
+
+    def refresh_token(self):
+        response = self.post("/refresh")
+
+        response.raise_for_status()
+
+        self.token = response.json()["token"]
+
+        return self.token
+
+
+
+
+import pytest
+from dotenv import load_dotenv
+
+from api_client import ApiClient
+
+load_dotenv()
+
 
 @pytest.fixture(scope="session")
-def auth():
-    token = login()
-    return AuthSession(token)
+def api():
+    client = ApiClient()
+    client.login()
+    return client
 
 
-def test_users(auth):
-    response = requests.get(
-        f"{BASE_URL}/users",
-        headers=auth.headers,
-    )
 
-def test_refresh(auth):
-    response = requests.post(
-        f"{BASE_URL}/refresh",
-        headers=auth.headers,
-    )
+def test_users(api):
+    response = api.get("/users")
 
-    auth.token = response.json()["token"]
+    assert response.status_code == 200
+
+
+def test_refresh_token(api):
+    old_token = api.token
+
+    new_token = api.refresh_token()
+
+    assert new_token != old_token
