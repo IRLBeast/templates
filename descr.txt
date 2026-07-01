@@ -1,72 +1,15 @@
-def test_add_merchant(api):
-    payload = {
-        "id": 0,
-        "merchantName": "Pytest Merchant",
-        "merchantId": "pytest-001",
-        "idDescription": 1
-    }
+import base64
 
-    response = api.post(
-        "/merchant",
-        json=payload
-    )
-
-    assert response.status_code == 200
-
-    body = response.json()
-
-    assert "merchants" in body
-
-    assert any(
-        merchant["merchantId"] == "pytest-001"
-        for merchant in body["merchants"]
-    )
-
-
-def test_delete_merchant(api):
-    payload = {
-        "id": 0,
-        "merchantName": "Delete Test",
-        "merchantId": "delete-test",
-        "idDescription": 1
-    }
-
-    response = api.post(
-        "/merchant",
-        json=payload
-    )
-
-    body = response.json()
-
-    merchant = next(
-        x for x in body["merchants"]
-        if x["merchantId"] == "delete-test"
-    )
-
-    response = api.delete(
-        "/merchant",
-        json=merchant
-    )
-
-    assert response.status_code == 200
-
-    body = response.json()
-
-    assert not any(
-        x["merchantId"] == "delete-test"
-        for x in body["merchants"]
-    )
-
-добавить в апи клиент метод:
 def change_password(self, username, password, new_password):
+    headers = {
+        "username": base64.b64encode(username.encode()).decode(),
+        "password": base64.b64encode(password.encode()).decode(),
+        "newpassword": base64.b64encode(new_password.encode()).decode(),
+    }
+
     response = self.session.post(
         f"{self.base_url}/changepassword",
-        headers={
-            "username": username,
-            "password": password,
-            "newpassword": new_password,
-            "Content-Length": "0"
-        },
+        headers=headers,
     )
 
     response.raise_for_status()
@@ -81,7 +24,7 @@ import os
 def test_change_password(api):
     username = os.getenv("USERNAME")
     old_password = os.getenv("PASSWORD")
-    new_password = "432109876573aZ"
+    new_password = os.getenv("NEW_PASSWORD")
 
     try:
         response = api.change_password(
@@ -94,7 +37,7 @@ def test_change_password(api):
         assert "token" in response.json()
 
     finally:
-        # Всегда пытаемся вернуть старый пароль
+        # Возвращаем старый пароль
         api.change_password(
             username=username,
             password=new_password,
