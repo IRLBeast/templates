@@ -1,6 +1,10 @@
 import os
 import base64
 import requests
+import pytest
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class ApiClient:
@@ -10,9 +14,15 @@ class ApiClient:
         self.token = None
 
     def login(self):
+        """Получение первого токена."""
+
         headers = {
-            "username": base64.b64encode(os.getenv("USERNAME").encode()).decode(),
-            "password": base64.b64encode(os.getenv("PASSWORD").encode()).decode(),
+            "username": base64.b64encode(
+                os.getenv("USERNAME").encode()
+            ).decode(),
+            "password": base64.b64encode(
+                os.getenv("PASSWORD").encode()
+            ).decode(),
         }
 
         response = self.session.get(
@@ -20,10 +30,27 @@ class ApiClient:
             headers=headers,
         )
 
-        response.raise_for_status()
+        assert response.status_code == 200
 
         self.token = response.json()["token"]
-        return self.token
+
+        return response
+
+    def refresh_token(self):
+        """Обновление токена."""
+
+        response = self.session.post(
+            f"{self.base_url}/refresh",
+            headers={
+                "Authorization": f"Bearer {self.token}"
+            },
+        )
+
+        assert response.status_code == 200
+
+        self.token = response.json()["token"]
+
+        return response
 
     @property
     def headers(self):
@@ -32,37 +59,44 @@ class ApiClient:
         }
 
     def get(self, endpoint, **kwargs):
+        headers = kwargs.pop("headers", {})
+        headers = {**self.headers, **headers}
+
         return self.session.get(
             f"{self.base_url}{endpoint}",
-            headers=self.headers,
+            headers=headers,
             **kwargs,
         )
 
     def post(self, endpoint, **kwargs):
+        headers = kwargs.pop("headers", {})
+        headers = {**self.headers, **headers}
+
         return self.session.post(
             f"{self.base_url}{endpoint}",
-            headers=self.headers,
+            headers=headers,
             **kwargs,
         )
 
-    def refresh_token(self):
-        response = self.post("/refresh")
+    def put(self, endpoint, **kwargs):
+        headers = kwargs.pop("headers", {})
+        headers = {**self.headers, **headers}
 
-        response.raise_for_status()
+        return self.session.put(
+            f"{self.base_url}{endpoint}",
+            headers=headers,
+            **kwargs,
+        )
 
-        self.token = response.json()["token"]
+    def delete(self, endpoint, **kwargs):
+        headers = kwargs.pop("headers", {})
+        headers = {**self.headers, **headers}
 
-        return self.token
-
-
-
-
-import pytest
-from dotenv import load_dotenv
-
-from api_client import ApiClient
-
-load_dotenv()
+        return self.session.delete(
+            f"{self.base_url}{endpoint}",
+            headers=headers,
+            **kwargs,
+        )
 
 
 @pytest.fixture(scope="session")
@@ -72,16 +106,17 @@ def api():
     return client
 
 
-
-def test_users(api):
-    response = api.get("/users")
+пример
+def test_get_pass_exp(api):
+    response = api.get("/pass-exp")
 
     assert response.status_code == 200
 
-
-def test_refresh_token(api):
+обновление токена
+def test_refresh(api):
     old_token = api.token
 
-    new_token = api.refresh_token()
+    response = api.refresh_token()
 
-    assert new_token != old_token
+    assert response.status_code == 200
+    assert api.token != old_token
