@@ -1,122 +1,82 @@
-import os
-import base64
-import requests
-import pytest
-from dotenv import load_dotenv
+Пример запроса для получения ключа доступа:
+HTTP/1.1
+GET "http://x.x.x.x/api/v1/login"
+-H "username: test"
+-H "password: 123456789012aZ"
 
-load_dotenv()
+Пример ответа с ключом доступа:
+HTTP/1.1 200 OK
+{"token": "eyJhbGciOemPRQ"}
 
+Пример запроса для получения ключа доступа с новым сроком действия с использованием действующего ключа доступа:
+HTTP/1.1
+POST "http://x.x.x.x/api/v1/refreshtoken"
+–H "Authorization: Bearer eyJhbGciODJleHj8yemPRQ"
 
-class ApiClient:
-    def __init__(self):
-        self.base_url = os.getenv("BASE_URL")
-        self.session = requests.Session()
-        self.token = None
+Пример ответа с ключом доступа с новым сроком действия:
+HTTP/1.1 200 OK
+{"token": "eyJhbGctH47g"}
 
-    def login(self):
-        """Получение первого токена."""
+Пример запроса для смены пароля:
+HTTP/1.1
+POST "http://x.x.x.x/api/v1/changepassword"
+-H "username: test" 
+-H "password: 123456789012aZ"
+-H "newpassword: 432109876573aZ"
+-Н "Content-Length:0"
 
-        headers = {
-            "username": base64.b64encode(
-                os.getenv("USERNAME").encode()
-            ).decode(),
-            "password": base64.b64encode(
-                os.getenv("PASSWORD").encode()
-            ).decode(),
+Пример ответа при изменении пароля:
+HTTP/1.1 200 OK
+{"token": "eyJhbGpf2f187w"}
+
+Пример запроса для получения Перечня
+HTTP/1.1
+GET "http://x.x.x.x/api/v1/merchant"
+–H "Authorization: Bearer eyJhbGciOiJIUa1m6WLc6Gw2
+ –H "cache-control: no-cache"
+
+Пример ответа:
+HTTP/1.1 200 OK
+“Сontent-Type: application/json”
+{
+    "token": "eyJhbGciOWc9Q",
+    "dateNow": "2025-04-10T15:26:58.7476909+03:00",
+    "dateUpdate": "2025-04-10T14:39:41.5644191+03:00",
+    "messages": null,
+    "descriptions": [
+        {
+            "idDescription": 1,
+            "name": "МПС",
+            "description1": "Признак международной платежной системы",
+            "cryptoexchangeRegistries": []
+        },
+    ],
+    "merchants": [
+        {
+            "id": 1,
+            "merchantName": "AAA",
+            "merchantId": "123",
+            "idDescription": 1,
+            "description": "МПС",
+            "cdBic": "ALFABY2X",
+            "dtCreate": "2025-04-08T14:15:45.3926944+03:00"
         }
+    ]
+}
 
-        response = self.session.get(
-            f"{self.base_url}/login",
-            headers=headers,
-        )
+Пример запроса на добавление информации в Перечень
+HTTP/1.1
+POST "http://x.x.x.x/api/v1/merchant"
+–H "Authorization: Bearer eyJhb1TAs1wXmA"
+–H "accept: application/json" –H "Content-Type: application/json" –H "cache-control: no-cache" –d 
+{"id":0,"merchantName":"Test name","merchantId":"Test ID","idDescription":1}"
+ответ аналогичен ответу на запрос получения перечня
 
-        assert response.status_code == 200
+Пример запроса на удаление информации из Перечня
+HTTP/1.1
+DELETE "http://x.x.x.x/api/v1/merchant"
+–H "Authorization: Bearer eyJhbGcGnpg"
+–H "accept: application/json" –H "Content-Type: application/json" –H "cache-control: no-cache" –d 
+{"id":8,"merchantName":"Test name","merchantId":"Test ID", "idDescription":1, "description":"МПС", "cdBic":"ALFABY2X", "dtCreate":"2025-04-10T15:38:47.6484075+03:00"}
+ответ аналогичен ответу на запрос получения Перечня
 
-        self.token = response.json()["token"]
-
-        return response
-
-    def refresh_token(self):
-        """Обновление токена."""
-
-        response = self.session.post(
-            f"{self.base_url}/refresh",
-            headers={
-                "Authorization": f"Bearer {self.token}"
-            },
-        )
-
-        assert response.status_code == 200
-
-        self.token = response.json()["token"]
-
-        return response
-
-    @property
-    def headers(self):
-        return {
-            "Authorization": f"Bearer {self.token}"
-        }
-
-    def get(self, endpoint, **kwargs):
-        headers = kwargs.pop("headers", {})
-        headers = {**self.headers, **headers}
-
-        return self.session.get(
-            f"{self.base_url}{endpoint}",
-            headers=headers,
-            **kwargs,
-        )
-
-    def post(self, endpoint, **kwargs):
-        headers = kwargs.pop("headers", {})
-        headers = {**self.headers, **headers}
-
-        return self.session.post(
-            f"{self.base_url}{endpoint}",
-            headers=headers,
-            **kwargs,
-        )
-
-    def put(self, endpoint, **kwargs):
-        headers = kwargs.pop("headers", {})
-        headers = {**self.headers, **headers}
-
-        return self.session.put(
-            f"{self.base_url}{endpoint}",
-            headers=headers,
-            **kwargs,
-        )
-
-    def delete(self, endpoint, **kwargs):
-        headers = kwargs.pop("headers", {})
-        headers = {**self.headers, **headers}
-
-        return self.session.delete(
-            f"{self.base_url}{endpoint}",
-            headers=headers,
-            **kwargs,
-        )
-
-
-@pytest.fixture(scope="session")
-def api():
-    client = ApiClient()
-    client.login()
-    return client
-
-
-пример
-def test_get_pass_exp(api):
-    response = api.get("/pass-exp")
-
-    assert response.status_code == 200
-
-обновление токена
-def test_refresh(api):
-    old_token = api.token
-
-    response = api.refresh_token()
-
-    assert response.status_code == 200
-    assert api.token != old_token
