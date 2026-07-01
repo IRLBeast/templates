@@ -1,9 +1,42 @@
-def open_section(page, title):
-    section = page.locator(
-        f'.dx-accordion-item:has(.dx-accordion-item-title-caption:has-text("{title}"))'
-    )
+# test_api.py
+import os
+import requests
+import base64
+from dotenv import load_dotenv
 
-    classes = section.get_attribute("class") or ""
+load_dotenv()
 
-    if "dx-accordion-item-opened" not in classes:
-        section.locator(".dx-accordion-item-title").click()
+class TestAPI:
+    TOKEN = None  # Переменная класса для хранения токена
+    
+    @classmethod
+    def setup_class(cls):
+        """Выполняется один раз перед всеми тестами"""
+        base_url = os.getenv("BASE_URL")
+        username = os.getenv("USERNAME")
+        password = os.getenv("PASSWORD")
+        
+        headers = {
+            "username": base64.b64encode(username.encode()).decode(),
+            "password": base64.b64encode(password.encode()).decode()
+        }
+        
+        response = requests.get(f"{base_url}/login", headers=headers)
+        assert response.status_code == 200
+        
+        cls.TOKEN = response.text
+        print(f"\n Токен сохранен: {cls.TOKEN[:20]}...")
+    
+    def test_protected_endpoint(self):
+        base_url = os.getenv("BASE_URL")
+        headers = {"Authorization": f"Bearer {self.TOKEN}"}
+        
+        response = requests.get(f"{base_url}/api/data", headers=headers)
+        assert response.status_code == 200
+        
+    def test_another_endpoint(self):
+        base_url = os.getenv("BASE_URL")
+        headers = {"Authorization": f"Bearer {self.TOKEN}"}
+        
+        response = requests.get(f"{base_url}/api/users", headers=headers)
+        assert response.status_code == 200
