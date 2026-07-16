@@ -1,1 +1,33 @@
-empty
+pip install ibm_db ibm_db_dbi
+
+import ibm_db
+import ibm_db_dbi
+import pandas as pd
+
+# свои данные для подключения
+conn_str = (
+    "DATABASE=имя_бд;"
+    "HOSTNAME=хост.zos;"
+    "PORT=порт;"
+    "PROTOCOL=TCPIP;"
+    "UID=пользователь;"
+    "PWD=пароль;"
+)
+
+try:
+    # подключение через ibm_db
+    ibm_db_conn = ibm_db.connect(conn_str, "", "")
+    # создание соединения с поддержкой DB-API 2.0
+    conn = ibm_db_dbi.Connection(ibm_db_conn)
+
+    sql = "SELECT * FROM имя_схемы.имя_таблицы FETCH FIRST 10 ROWS ONLY"
+    
+    #pandas для удобного чтения
+    df = pd.read_sql_query(sql, conn)
+    print(df)
+
+except Exception as e:
+    print(f"Ошибка: {e}")
+finally:
+    if 'ibm_db_conn' in locals():
+        ibm_db.close(ibm_db_conn)
