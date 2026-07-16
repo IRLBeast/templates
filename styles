@@ -1,9 +1,36 @@
-import pytest
-from playwright.sync_api import sync_playwright
-from playwright.sync_api import Page
+Client information for the current copy (copy name: D_autotest_.venv_Lib_site-packages_clidriver):
+===============================================================================
 
-@pytest.fixture()
-def page(context):
-    page: Page = context.new_page()
-    page.set_viewport_size({'height': 1080, 'width': 1920})
-    yield page
+Client Package Type       : IBM Data Server Driver For ODBC and CLI
+Client Version (level/bit): DB2 v12.1.0.986 (s2410070955/64-bit)
+Client Platform           : NT 64BIT
+Install/Instance Path     : D:\autotest\.venv\Lib\site-packages\clidriver
+
+Common App Data Path      : C:\ProgramData\IBM\DB2\D_autotest_.venv_Lib_site-packages_clidriver
+DB2DSDRIVER_CFG_PATH value: <not-set>
+db2dsdriver.cfg Path      : <Common App Data Path>\cfg\db2dsdriver.cfg
+DB2CLIINIPATH value       : <not-set>
+db2cli.ini Path           : <Common App Data Path>\cfg\db2cli.ini
+db2diag.log Path          : <Common App Data Path>\db2diag.log
+
+===============================================================================
+List of all IBM Data Server client packages on the current workstation:
+===============================================================================
+
+Copyname                                        Version Package Language Installed-Location
+-------------------------------------------------------------------------------
+D_autotest_.venv_Lib_site-packages_clidriver[C] 12.1.0000 CLI     EN       D:\autotest\.venv\Lib\site-packages\clidriver
+-------------------------------------------------------------------------------
+ CLI: IBM Data Server Driver for ODBC and CLI
+-------------------------------------------------------------------------------
+
+===============================================================================
+db2dsdriver.cfg schema validation for the entire file:
+===============================================================================
+
+Note: The validation utility could not find the configuration file
+db2dsdriver.cfg. The file is searched at
+"C:\ProgramData\IBM\DB2\D_autotest_.venv_Lib_site-packages_clidriver\cfg\db2dsdriver.cfg".
+
+===============================================================================
+The validation is completed.
