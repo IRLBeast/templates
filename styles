@@ -1,4 +1,4 @@
-PS D:\autotest\.venv\Lib\site-packages\clidriver\bin> .\db2cli.exe -help
+PS D:\autotest\.venv\Lib\site-packages\clidriver\bin> .\db2cli.exe execsql -help
 IBM Db2 Interactive CLI Sample Program
 (C) COPYRIGHT International Business Machines Corp. 1993,1996
 All Rights Reserved
@@ -7,285 +7,121 @@ US Government Users Restricted Rights - Use, duplication or
 disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
 
 ===============================================================================
-DB2 interactive Call Level Interface (CLI) environment
+DB2 interactive Call Level Interface (CLI) environment - execsql mode
 ===============================================================================
 
-The DB2 interactive CLI environment is a multi-purpose design and prototyping
-tool.
-
-Command syntax
-
-  db2cli [-help] [<mode>]
-
-Command parameters (<mode> values)
-
-  validate
-
-      Validate db2cli.ini and db2dsdriver.cfg configuration files.
-
-  bind
-
-      Bind dynamic packages used by CLI, .NET and JCC applications against the
-      target database.
-
-  registerdsn
-
-      Register a ODBC DSN from the db2cli.ini and db2dsdriver.cfg files
-      (Windows only).
-
-  install
-
-      Register and Unregister IBM Data Server Driver for ODBC and CLI.
-
-  refreshldap
-
-      Functionality to refresh dsn entries from LDAP to IBM Data Server Driver
-      Configuration File.
-
-  execsql
-
-      Execute or prepare the given SQL statements. Can also capture the SQLs in
-      the PDQXML file when capturemode is enabled in the configuration files.
-
-  writecfg
-
-      Functionality to add/remove dsn or database entries, and to add, modify
-      and remove the parameters in the db2dsdriver.cfg file.
-
-  -help
-
-      Display db2cli tool help and usage information.
-
-NOTE: For further details of each <mode>, append "-help" option after
-specifying <mode>.
-
-For example:
-
-  1. db2cli validate -help
-  2. db2cli writecfg -help
-
-PS D:\autotest\.venv\Lib\site-packages\clidriver\bin> .\db2cli.exe writecfg -help
-
-===============================================================================
-DB2 interactive Call Level Interface (CLI) environment - writecfg mode
-===============================================================================
-
-You can use the DB2 interactive CLI environment in writecfg mode to perform the
+You can use the DB2 interactive CLI environment in execsql mode to perform the
 following task (s):
 
-  - Add or Remove dsn entry in the db2dsdriver.cfg file.
-  - Add or Remove database entry in the dsdriver.cfg file.
-  - Add, Modify or Remove parameters in the db2dsdriver.cfg file.
-  - Add, Modify or Remove session global variables in the db2dsdriver.cfg file.
-  - Add, Modify or Remove special registers in the db2dsdriver.cfg file.
-  - Add, Modify or Remove ACR parameters in the db2dsdriver.cfg file.
-  - Add, Modify or Remove ACR subsections like alternategroup,
-    alternateserverlist, affinitylist, clientaffinitydefined,
-    clientaffinityroundrobin.
-  - Add, Modify or Remove WLB parameters in the db2dsdriver.cfg file.
+  - Execute the set SQL statements available in the text file.
+  - Prepare the set SQL statements available in the text file.
+  - Capture the SQL statements in the PDQXML file.
 
 Command syntax
 
-  db2cli writecfg
-      {
-        add    { [ [-dsn <dsn_name> -description <dsn_description>]
-                   -database <dbname> -host <server> -port <port> ],
-                 [ [-parameter[s] "<par1>=<val1>
-                                   [;...;<parN>=<valN>;]"]
-                   [-sessionglobalvariables "<par1>=<val1>
-                                             [;...;<parN>=<valN>;]"]
-                   [-specialregisters "<par1>=<val1>
-                                       [;...;<parN>=<valN>;]"]
-                   [-wlb "[<par1>=<val1>;...;<parN>=<valN>;]"]
-                   [-acr "[<par1>=<val1>;...;<parN>=<valN>;]"
-                      [-alternategroup "[<par1>=<val1>;...;<parN>=<valN>;]"
-                           -database <dbname> -host <server> -port <port>]
-                      [-alternateserverlist -server <server name>
-                           -host <server> -port <port>]
-                      [-affinitylist -list <listname>
-                           -serverorder "<server name1, server name2>"]
-                      [-clientaffinitydefined -client <client name>
-                           -host <server> -list <list name>]
-                      [-clientaffinityroundrobin -client <client name>
-                           -host <server>]
-                   ]
-                 ]
-               } |
-        remove { [ [-dsn <dsn_name>]
-                   [-database <dbname> -host <server> -port <port>]
-                 ],
-                 [ [ [-parameter[s] "<par1>[;...;<parN>]"]
-                     [-sessionglobalvariables "<par1>[;...;<parN>]"]
-                     [-specialregisters "<par1>[;...;<parN>]"]
-                     [-wlb "[<par1>;...;<parN>]"]
-                     [-acr "[<par1>;...;<parN>]"
-                        [-alternategroup "[<par1>;...;<parN>]"
-                                         [-database <dbname>
-                                          -host <server>
-                                          -port <port>]]
-                        [-alternateserverlist [-server <server name>]]
-                        [-affinitylist [-list <listname>]]
-                        [-clientaffinitydefined [-client <client name>]]
-                        [-clientaffinityroundrobin [-client <client name>]]
-                     ]
-                   ] |
-                   [-parameters]
-                 ]
-               } |
-        -help
-      }
+  db2cli execsql [ -execute | -prepareonly ]
+      { [-dsn <dsn_name> [-user <username> [ -passwd <passwd>] ] ] |
+      [-connstring <connection-string>] }
+      [-inputsql <sqlfile>]
+      [-outfile <outputfile>]
+      [-statementdelimiter <delimiter>]
+      [-commentstart  <commentindicator>]
+      [-cursorhold  <holdability>]
+      [-cursorconcurrency <concurrency>]
+      [-cursortypes <type>]
+      [-help]
 
 Command parameters
 
-  add
+  execsql
 
-      Add dsn, database, parameter, session global variables, special register
-      entries, wlb paremeters,and acr parameters and subsections like
-      alternategroup, alternateserverlist, affinitylist, clientaffinitydefined
-      & clientaffinityroundrobin entries to db2dsdriver.cfg
+      Execute or prepare the SQL statements given. Can also capture the SQLs in
+      the PDQXML file when capturemode is enabled in the configuration files.
 
-  remove
+  -execute
 
-      Remove dsn, database, parameter, session global variables,special
-      register  entries from db2dsdriver.cfg.
+      This is default mode of execsql. All the SQL will be executed and the
+      results (Success or error) will be displayed.
 
-      If -dsn is specified, parameters/session global variables/special
-      registers from matching dsn section are removed.
+  -prepareonly
 
-      If -database is specified, parameters/session global variables/special
-      registers/wlb/acr parameters from matching database section are removed.
+      All the SQL will just be prepared. This is mainly for the user who wants
+      to avoid actual execution of the SQLs at the server end and to check if
+      the syntax of the SQL is correct without actually executing the SQL.
 
-      If no <parameter>/<sessionglobalvariables> specified, the entire
-      dsn/database section is removed.
+  -dsn <dsn_name>
 
-      If no -dsn nor -database specified, parameters/session global variables
-      are removed from GLOBAL section.
+      Name of the data source.
 
-  -dsn <dsn_name> -description <dsn_description> -database <dbname> -host <server> -port <port>
+  -user <username>
 
-      It specifies an alias name along with an optional description value.
-      -dsn <dsn_name> mandatory for -description <dsn_description>.
-      If -database is not specified <dsn_name> must exist in the
-      db2dsdriver.cfg.
+      User name for connecting to the data source.
 
-  -database <dbname> -host <server> -port <port>
+  -passwd <passwd>
 
-      New database section will be created. The specified <parameter>/
-      <sessionglobalvariables>/ <specialregisters>/ <wlb>/ <acr> and its
-      subsectionsvalues will be added to the <database> section.
+      password for the specified username.
 
-  -parameter[s] "<par1>=[<val1>];<par2>=[<val2>];...;<parN>=[<valN>]"
+  -connstring <connection-string>
 
-      Specifies parameter name to be added/removed from appropriate section of
-      db2dsdriver.cfg.
+      CLI Connection string.
 
-      If "remove" option is specified and <parN> doesn't exist then no action
-      will be taken.
+  -inputsql <sqlfile>
 
-      If "add" option is specified and <parN> already exists the current value
-      will be overwritten with that specified in the <varN>
+      Option to provide the input SQL file. This input SQL file will have SQL
+      separated by the delimiters.
 
-  -sessionglobalvariables "<par1>=[<val1>];<par2>=[<val2>];...;<parN>=[<valN>]"
+  -outfile <outputfile>
 
-      Specifies session global variable name to be added/removed from
-      appropriate section of db2dsdriver.cfg.
+      Option to specify the file to store the output results.
 
-      If "remove" option is specified and <parN> doesn't exist then no action
-      will be taken.
+  -statementdelimiter <delimiter>
 
-      If "add" option is specified and <parN> already exists the current value
-      will be overwritten with that specified in the <varN>
+      Option to specify the delimiter used in the input SQL file. The default
+      delimiter is CRLF (Carriage Return/Line Feed)
 
-  -specialregisters "<par1>=[<val1>];<par2>=[<val2>];...;<parN>=[<valN>]"
+  -commentstart  <commentindicator>
 
-      Specifies special register name to be added/removed from appropriate
-      section of db2dsdriver.cfg.
+      Option to specify the character combination that appears at the beginning
+      of a line to indicate a single line comment. The default is two dashes
+      (--).
 
-      If "remove" option is specified and <parN> doesn't exist then no action
-      will be taken.
+  -cursorhold  <holdability>
 
-      If "add" option is specified and <parN> already exists the current value
-      will be overwritten with that specified in the <varN>
+      Option to specify the cursor holdability for all statements. The
+      holdability is one of the following values:
 
-  -wlb "<par1>=[<val1>];...;<parN>=[<valN>];"
+      yes : The cursors are not destroyed when the transaction is committed.
+      no  : The cursors are destroyed when the transaction is committed.
 
-      Specifies workload balancing parameters to be added/removed from
-      appropriate section of db2dsdriver.cfg.
+  -cursorconcurrency <concurrency>
 
-      If "remove" option is specified and <parN> doesn't exist then no action
-      will be taken.
+      Option to specify the cursor concurrency for all the statements. The
+      concurrency is one of the following values:
 
-      If "add" option is specified and <parN> already exists the current value
-      will be overwritten with that specified in the <varN>
+      readonly : Sets the cursor concurrency to be read only. This is the
+      default.
 
-  -acr "<par1>=[<val1>];...;<parN>=[<valN>];"
+      lock     : Cursor uses the lowest level of locking sufficient to ensure
+      that the row can be updated.
 
-      Specifies automatic client reroute parameters to be added/removed from
-      appropriate section of db2dsdriver.cfg.
+      values   : Cursor uses optimistic concurrency control, comparing values
 
-      If "remove" option is specified and <parN> doesn't exist then no action
-      will be taken.
+  -cursortypes <type>
 
-      If "add" option is specified and <parN> already exists the current value
-      will be overwritten with that specified in the <varN>
+      Specifies which cursor types are permitted. The cursortypes is one of the
+      following values:
 
-  -alternategroup "[<par1>=<val1>;...;<parN>=<valN>;" [-database <dbname> -host <server> -port <port>]
+      forwardonly : The cursor only scrolls forward. This is the default.
 
-      Specifies alternategroup parameters or database to be added/removed  from
-      acr section of db2dsdriver.cfg.
+      static      : The data in the result set is static.
 
-      If "remove" option is specified and <parN> or database doesn't exist then
-      no action will be taken.
+      keyset      : Unlike a static scrollable cursor, a keyset-driven
+      scrollable cursor can detect and make changes to the underlying data.
 
-      If "add" option is specified and <parN> already exists the current value
-      will be overwritten with that specified in the <varN> and if database
-      name with specific host, port trying to add already exist then no action
-      will be taken
-
-  -alternateserverlist [-server <server name> -host <server> -port <port>]
-
-      Specifies alternateserverlist to be added/removed from acr section  of
-      db2dsdriver.cfg.
-
-      If "remove" option is specified and server doesn't exist then no action
-      will be taken.
-
-      If "add" option is specified and if server name with specific host and
-      port is already configured  then no action will be taken
-
-  -affinitylist [-list <list name> -serverorder "<server name1, server name2>"]
-
-      Specifies affinitylist to be added/removed from acr section of
-      db2dsdriver.cfg.
-
-      If "remove" option is specified and list name doesn't exist then no
-      action will be taken.
-
-      If "add" option is specified and if list name with specific server order
-      is already configured then no action will be taken
-
-  -clientaffinitydefined [-client <client name> -host <server> -list <list name>]
-
-      Specifies clientaffinitydefined to be added/removed from acr section of
-      db2dsdriver.cfg.
-
-      If "remove" option is specified and client name doesn't exist then no
-      action will be taken.
-
-      If "add" option is specified and if client name with specific host and
-      list name is already configured then no action will be taken
-
-  -clientaffinityroundrobin [-client <client name> -host <server>]
-
-      Specifies clientaffinityroundrobin to be added/removed from acr section
-      of db2dsdriver.cfg.
-
-      If "remove" option is specified and client name doesn't exist then no
-      action will be taken.
-
-      If "add" option is specified and if client name with specific host is
-      already configured then no action will be taken
+      dynamic     : A dynamic scrollable cursor detects all changes (inserts,
+      deletes and updates) to the result set and make insertions, deletions and
+      updates to result set.
 
   -help
 
-      Display db2cli writecfg command help and usage information.
+      Display db2cli execsql command help and usage information.
