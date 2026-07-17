@@ -1,36 +1,291 @@
-Client information for the current copy (copy name: D_autotest_.venv_Lib_site-packages_clidriver):
-===============================================================================
-
-Client Package Type       : IBM Data Server Driver For ODBC and CLI
-Client Version (level/bit): DB2 v12.1.0.986 (s2410070955/64-bit)
-Client Platform           : NT 64BIT
-Install/Instance Path     : D:\autotest\.venv\Lib\site-packages\clidriver
-
-Common App Data Path      : C:\ProgramData\IBM\DB2\D_autotest_.venv_Lib_site-packages_clidriver
-DB2DSDRIVER_CFG_PATH value: <not-set>
-db2dsdriver.cfg Path      : <Common App Data Path>\cfg\db2dsdriver.cfg
-DB2CLIINIPATH value       : <not-set>
-db2cli.ini Path           : <Common App Data Path>\cfg\db2cli.ini
-db2diag.log Path          : <Common App Data Path>\db2diag.log
+PS D:\autotest\.venv\Lib\site-packages\clidriver\bin> .\db2cli.exe -help
+IBM Db2 Interactive CLI Sample Program
+(C) COPYRIGHT International Business Machines Corp. 1993,1996
+All Rights Reserved
+Licensed Materials - Property of IBM
+US Government Users Restricted Rights - Use, duplication or
+disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
 
 ===============================================================================
-List of all IBM Data Server client packages on the current workstation:
+DB2 interactive Call Level Interface (CLI) environment
 ===============================================================================
 
-Copyname                                        Version Package Language Installed-Location
--------------------------------------------------------------------------------
-D_autotest_.venv_Lib_site-packages_clidriver[C] 12.1.0000 CLI     EN       D:\autotest\.venv\Lib\site-packages\clidriver
--------------------------------------------------------------------------------
- CLI: IBM Data Server Driver for ODBC and CLI
--------------------------------------------------------------------------------
+The DB2 interactive CLI environment is a multi-purpose design and prototyping
+tool.
+
+Command syntax
+
+  db2cli [-help] [<mode>]
+
+Command parameters (<mode> values)
+
+  validate
+
+      Validate db2cli.ini and db2dsdriver.cfg configuration files.
+
+  bind
+
+      Bind dynamic packages used by CLI, .NET and JCC applications against the
+      target database.
+
+  registerdsn
+
+      Register a ODBC DSN from the db2cli.ini and db2dsdriver.cfg files
+      (Windows only).
+
+  install
+
+      Register and Unregister IBM Data Server Driver for ODBC and CLI.
+
+  refreshldap
+
+      Functionality to refresh dsn entries from LDAP to IBM Data Server Driver
+      Configuration File.
+
+  execsql
+
+      Execute or prepare the given SQL statements. Can also capture the SQLs in
+      the PDQXML file when capturemode is enabled in the configuration files.
+
+  writecfg
+
+      Functionality to add/remove dsn or database entries, and to add, modify
+      and remove the parameters in the db2dsdriver.cfg file.
+
+  -help
+
+      Display db2cli tool help and usage information.
+
+NOTE: For further details of each <mode>, append "-help" option after
+specifying <mode>.
+
+For example:
+
+  1. db2cli validate -help
+  2. db2cli writecfg -help
+
+PS D:\autotest\.venv\Lib\site-packages\clidriver\bin> .\db2cli.exe writecfg -help
 
 ===============================================================================
-db2dsdriver.cfg schema validation for the entire file:
+DB2 interactive Call Level Interface (CLI) environment - writecfg mode
 ===============================================================================
 
-Note: The validation utility could not find the configuration file
-db2dsdriver.cfg. The file is searched at
-"C:\ProgramData\IBM\DB2\D_autotest_.venv_Lib_site-packages_clidriver\cfg\db2dsdriver.cfg".
+You can use the DB2 interactive CLI environment in writecfg mode to perform the
+following task (s):
 
-===============================================================================
-The validation is completed.
+  - Add or Remove dsn entry in the db2dsdriver.cfg file.
+  - Add or Remove database entry in the dsdriver.cfg file.
+  - Add, Modify or Remove parameters in the db2dsdriver.cfg file.
+  - Add, Modify or Remove session global variables in the db2dsdriver.cfg file.
+  - Add, Modify or Remove special registers in the db2dsdriver.cfg file.
+  - Add, Modify or Remove ACR parameters in the db2dsdriver.cfg file.
+  - Add, Modify or Remove ACR subsections like alternategroup,
+    alternateserverlist, affinitylist, clientaffinitydefined,
+    clientaffinityroundrobin.
+  - Add, Modify or Remove WLB parameters in the db2dsdriver.cfg file.
+
+Command syntax
+
+  db2cli writecfg
+      {
+        add    { [ [-dsn <dsn_name> -description <dsn_description>]
+                   -database <dbname> -host <server> -port <port> ],
+                 [ [-parameter[s] "<par1>=<val1>
+                                   [;...;<parN>=<valN>;]"]
+                   [-sessionglobalvariables "<par1>=<val1>
+                                             [;...;<parN>=<valN>;]"]
+                   [-specialregisters "<par1>=<val1>
+                                       [;...;<parN>=<valN>;]"]
+                   [-wlb "[<par1>=<val1>;...;<parN>=<valN>;]"]
+                   [-acr "[<par1>=<val1>;...;<parN>=<valN>;]"
+                      [-alternategroup "[<par1>=<val1>;...;<parN>=<valN>;]"
+                           -database <dbname> -host <server> -port <port>]
+                      [-alternateserverlist -server <server name>
+                           -host <server> -port <port>]
+                      [-affinitylist -list <listname>
+                           -serverorder "<server name1, server name2>"]
+                      [-clientaffinitydefined -client <client name>
+                           -host <server> -list <list name>]
+                      [-clientaffinityroundrobin -client <client name>
+                           -host <server>]
+                   ]
+                 ]
+               } |
+        remove { [ [-dsn <dsn_name>]
+                   [-database <dbname> -host <server> -port <port>]
+                 ],
+                 [ [ [-parameter[s] "<par1>[;...;<parN>]"]
+                     [-sessionglobalvariables "<par1>[;...;<parN>]"]
+                     [-specialregisters "<par1>[;...;<parN>]"]
+                     [-wlb "[<par1>;...;<parN>]"]
+                     [-acr "[<par1>;...;<parN>]"
+                        [-alternategroup "[<par1>;...;<parN>]"
+                                         [-database <dbname>
+                                          -host <server>
+                                          -port <port>]]
+                        [-alternateserverlist [-server <server name>]]
+                        [-affinitylist [-list <listname>]]
+                        [-clientaffinitydefined [-client <client name>]]
+                        [-clientaffinityroundrobin [-client <client name>]]
+                     ]
+                   ] |
+                   [-parameters]
+                 ]
+               } |
+        -help
+      }
+
+Command parameters
+
+  add
+
+      Add dsn, database, parameter, session global variables, special register
+      entries, wlb paremeters,and acr parameters and subsections like
+      alternategroup, alternateserverlist, affinitylist, clientaffinitydefined
+      & clientaffinityroundrobin entries to db2dsdriver.cfg
+
+  remove
+
+      Remove dsn, database, parameter, session global variables,special
+      register  entries from db2dsdriver.cfg.
+
+      If -dsn is specified, parameters/session global variables/special
+      registers from matching dsn section are removed.
+
+      If -database is specified, parameters/session global variables/special
+      registers/wlb/acr parameters from matching database section are removed.
+
+      If no <parameter>/<sessionglobalvariables> specified, the entire
+      dsn/database section is removed.
+
+      If no -dsn nor -database specified, parameters/session global variables
+      are removed from GLOBAL section.
+
+  -dsn <dsn_name> -description <dsn_description> -database <dbname> -host <server> -port <port>
+
+      It specifies an alias name along with an optional description value.
+      -dsn <dsn_name> mandatory for -description <dsn_description>.
+      If -database is not specified <dsn_name> must exist in the
+      db2dsdriver.cfg.
+
+  -database <dbname> -host <server> -port <port>
+
+      New database section will be created. The specified <parameter>/
+      <sessionglobalvariables>/ <specialregisters>/ <wlb>/ <acr> and its
+      subsectionsvalues will be added to the <database> section.
+
+  -parameter[s] "<par1>=[<val1>];<par2>=[<val2>];...;<parN>=[<valN>]"
+
+      Specifies parameter name to be added/removed from appropriate section of
+      db2dsdriver.cfg.
+
+      If "remove" option is specified and <parN> doesn't exist then no action
+      will be taken.
+
+      If "add" option is specified and <parN> already exists the current value
+      will be overwritten with that specified in the <varN>
+
+  -sessionglobalvariables "<par1>=[<val1>];<par2>=[<val2>];...;<parN>=[<valN>]"
+
+      Specifies session global variable name to be added/removed from
+      appropriate section of db2dsdriver.cfg.
+
+      If "remove" option is specified and <parN> doesn't exist then no action
+      will be taken.
+
+      If "add" option is specified and <parN> already exists the current value
+      will be overwritten with that specified in the <varN>
+
+  -specialregisters "<par1>=[<val1>];<par2>=[<val2>];...;<parN>=[<valN>]"
+
+      Specifies special register name to be added/removed from appropriate
+      section of db2dsdriver.cfg.
+
+      If "remove" option is specified and <parN> doesn't exist then no action
+      will be taken.
+
+      If "add" option is specified and <parN> already exists the current value
+      will be overwritten with that specified in the <varN>
+
+  -wlb "<par1>=[<val1>];...;<parN>=[<valN>];"
+
+      Specifies workload balancing parameters to be added/removed from
+      appropriate section of db2dsdriver.cfg.
+
+      If "remove" option is specified and <parN> doesn't exist then no action
+      will be taken.
+
+      If "add" option is specified and <parN> already exists the current value
+      will be overwritten with that specified in the <varN>
+
+  -acr "<par1>=[<val1>];...;<parN>=[<valN>];"
+
+      Specifies automatic client reroute parameters to be added/removed from
+      appropriate section of db2dsdriver.cfg.
+
+      If "remove" option is specified and <parN> doesn't exist then no action
+      will be taken.
+
+      If "add" option is specified and <parN> already exists the current value
+      will be overwritten with that specified in the <varN>
+
+  -alternategroup "[<par1>=<val1>;...;<parN>=<valN>;" [-database <dbname> -host <server> -port <port>]
+
+      Specifies alternategroup parameters or database to be added/removed  from
+      acr section of db2dsdriver.cfg.
+
+      If "remove" option is specified and <parN> or database doesn't exist then
+      no action will be taken.
+
+      If "add" option is specified and <parN> already exists the current value
+      will be overwritten with that specified in the <varN> and if database
+      name with specific host, port trying to add already exist then no action
+      will be taken
+
+  -alternateserverlist [-server <server name> -host <server> -port <port>]
+
+      Specifies alternateserverlist to be added/removed from acr section  of
+      db2dsdriver.cfg.
+
+      If "remove" option is specified and server doesn't exist then no action
+      will be taken.
+
+      If "add" option is specified and if server name with specific host and
+      port is already configured  then no action will be taken
+
+  -affinitylist [-list <list name> -serverorder "<server name1, server name2>"]
+
+      Specifies affinitylist to be added/removed from acr section of
+      db2dsdriver.cfg.
+
+      If "remove" option is specified and list name doesn't exist then no
+      action will be taken.
+
+      If "add" option is specified and if list name with specific server order
+      is already configured then no action will be taken
+
+  -clientaffinitydefined [-client <client name> -host <server> -list <list name>]
+
+      Specifies clientaffinitydefined to be added/removed from acr section of
+      db2dsdriver.cfg.
+
+      If "remove" option is specified and client name doesn't exist then no
+      action will be taken.
+
+      If "add" option is specified and if client name with specific host and
+      list name is already configured then no action will be taken
+
+  -clientaffinityroundrobin [-client <client name> -host <server>]
+
+      Specifies clientaffinityroundrobin to be added/removed from acr section
+      of db2dsdriver.cfg.
+
+      If "remove" option is specified and client name doesn't exist then no
+      action will be taken.
+
+      If "add" option is specified and if client name with specific host is
+      already configured then no action will be taken
+
+  -help
+
+      Display db2cli writecfg command help and usage information.
