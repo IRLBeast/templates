@@ -1,7 +1,11 @@
-C:\Program Files\IBM\clidriver\bin
-D:\autotest\.venv\Lib\site-packages\clidriver\bin
+import os
+import sys
 
-test.sql:
-SELECT * FROM RTGX."MessageInMX" ORDER BY "TmCreateBAH" DESC FETCH FIRST 10 ROWS ONLY;
+# Принудительно указываем путь к clidriver
+clidriver_path = r'D:\autotest\.venv\Lib\site-packages\clidriver\bin'
+os.environ['PATH'] = clidriver_path + os.pathsep + os.environ['PATH']
+os.environ['IBM_DB_HOME'] = r'D:\autotest\.venv\Lib\site-packages\clidriver'
 
-db2cli.exe execsql -connstring "DATABASE=DB2B;HOSTNAME=10.10.10.10;PORT=1020;PROTOCOL=TCPIP;UID=user1;PWD=pass1" -inputsql test.sql
+# Проверяем, что видит драйвер
+print("IBM_DB_HOME:", os.environ.get('IBM_DB_HOME'))
+print("PATH includes clidriver:", clidriver_path in os.environ['PATH'])
