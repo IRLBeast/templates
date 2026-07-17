@@ -1,11 +1,7 @@
-print(ibm_db.__version__):
-3.2.9
+C:\Program Files\IBM\clidriver\bin
+D:\autotest\.venv\Lib\site-packages\clidriver\bin
 
-print(ibm_db.__file__):
-D:\autotest\.venv\Lib\site-packages\ibm_db.cp313-win_amd64.pyd
+test.sql:
+SELECT * FROM RTGX."MessageInMX" ORDER BY "TmCreateBAH" DESC FETCH FIRST 10 ROWS ONLY;
 
-print(os.environ.get("IBM_DB_HOME")):
-None
-
-print(os.environ.get("PATH"))
-D:\autotest\.venv\Scripts;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files\Aladdin\eToken\PKIClient\x32;C:\Program Files\Aladdin\eToken\PKIClient\x64;C:\Program Files (x86)\Avest\AvPCM_nces;D:\WinSCP\;D:\putty\;D:\Git\cmd;C:\Program Files\Microsoft SQL Server\130\Tools\Binn\;C:\Program Files\Microsoft SQL Server\Client SDK\ODBC\170\Tools\Binn\;C:\Program Files (x86)\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\Microsoft SQL Server\150\Tools\Binn\;C:\Program Files\Microsoft SQL Server\150\DTS\Binn\;C:\Program Files (x86)\Microsoft SQL Server\160\DTS\Binn\;C:\Users\chembrovich_ev\scoop\shims;D:\jdk-17.0.19.10-hotspot\bin;D:\Python_3.13.9\Scripts\;D:\Python_3.13.9\;C:\Users\chembrovich_ev\AppData\Local\Programs\Python\Launcher\;C:\Users\chembrovich_ev\AppData\Local\Microsoft\WindowsApps;C:\Users\chembrovich_ev\AppData\Local\GitHubDesktop\bin;D:\PyCharm Community Edition 2025.3.2.1\bin
+db2cli.exe execsql -connstring "DATABASE=DB2B;HOSTNAME=10.10.10.10;PORT=1020;PROTOCOL=TCPIP;UID=user1;PWD=pass1" -inputsql test.sql
