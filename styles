@@ -1,23 +1,4 @@
-import ibm_db
+test.sql РІ РїР°РїРєРµ C:\Program Files\IBM\clidriver\bin
+SELECT * FROM RTGX."MessageInMX" ORDER BY "TmCreateBAH" DESC FETCH FIRST 10 ROWS ONLY;
 
-conn_str = (
-    "DATABASE=DB2B;"
-    "HOSTNAME=10.10.10.10;"
-    "PORT=5555;"
-    "PROTOCOL=TCPIP;"
-    "UID=user1;"
-    "PWD=pass11;"
-)
-
-try:
-    conn = ibm_db.connect(conn_str, "", "")
-    print("Connected")
-
-    stmt = ibm_db.exec_immediate(conn, "SELECT * FROM RTGX.\"MessageInMX\" ORDER BY \"TmCreateBAH\" DESC FETCH FIRST 10 ROWS ONLY")
-    while ibm_db.fetch_row(stmt):
-        print(ibm_db.result(stmt, 0))
-
-    ibm_db.close(conn)
-
-except Exception as e:
-    print("error:", e)
+db2cli execsql -connstring "DATABASE=DB2B;HOSTNAME=10.10.10.10;PORT=555;PROTOCOL=TCPIP;UID=user1;PWD=pass11" -inputsql test.sql
