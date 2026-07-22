@@ -1,15 +1,18 @@
 import subprocess
-import json
+import os
 
-db2_command = (
-    'db2cli execsql -connstr "DATABASE=DB2B;HOSTNAME=10.10.10.10;PORT=5555;'
-    'PROTOCOL=TCPIP;UID=user1;PWD=pass11;" -inputsql "SELECT * FROM RTGX.\"MessageInMX\" '
-    'ORDER BY \"TmCreateBAH\" DESC FETCH FIRST 10 ROWS ONLY"'
+os.chdir(r"C:\Program Files\IBM\clidriver\bin")
+
+command = (
+    'db2cli execsql -connstring "DATABASE=DB2B;HOSTNAME=10.10.10.10;PORT=555;'
+    'PROTOCOL=TCPIP;UID=user1;PWD=pass11" -inputsql test.sql'
 )
 
-result = subprocess.run(db2_command, shell=True, capture_output=True, text=True)
+result = subprocess.run(command, shell=True, capture_output=True, text=True)
 
-if result.returncode == 0:
-    print(result.stdout)
-else:
-    print("Ошибка:", result.stderr)
+print("STDOUT:")
+print(result.stdout)
+
+if result.stderr:
+    print("STDERR:")
+    print(result.stderr)
