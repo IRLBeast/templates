@@ -1,33 +1,15 @@
-pip install ibm_db ibm_db_dbi
+import subprocess
+import json
 
-import ibm_db
-import ibm_db_dbi
-import pandas as pd
-
-# свои данные для подключения
-conn_str = (
-    "DATABASE=имя_бд;"
-    "HOSTNAME=хост.zos;"
-    "PORT=порт;"
-    "PROTOCOL=TCPIP;"
-    "UID=пользователь;"
-    "PWD=пароль;"
+db2_command = (
+    'db2cli execsql -connstr "DATABASE=DB2B;HOSTNAME=10.10.10.10;PORT=5555;'
+    'PROTOCOL=TCPIP;UID=user1;PWD=pass11;" -inputsql "SELECT * FROM RTGX.\"MessageInMX\" '
+    'ORDER BY \"TmCreateBAH\" DESC FETCH FIRST 10 ROWS ONLY"'
 )
 
-try:
-    # подключение через ibm_db
-    ibm_db_conn = ibm_db.connect(conn_str, "", "")
-    # создание соединения с поддержкой DB-API 2.0
-    conn = ibm_db_dbi.Connection(ibm_db_conn)
+result = subprocess.run(db2_command, shell=True, capture_output=True, text=True)
 
-    sql = "SELECT * FROM имя_схемы.имя_таблицы FETCH FIRST 10 ROWS ONLY"
-    
-    #pandas для удобного чтения
-    df = pd.read_sql_query(sql, conn)
-    print(df)
-
-except Exception as e:
-    print(f"Ошибка: {e}")
-finally:
-    if 'ibm_db_conn' in locals():
-        ibm_db.close(ibm_db_conn)
+if result.returncode == 0:
+    print(result.stdout)
+else:
+    print("Ошибка:", result.stderr)
