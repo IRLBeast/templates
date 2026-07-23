@@ -1,4 +1,60 @@
-test.sql РІ РїР°РїРєРµ C:\Program Files\IBM\clidriver\bin
-SELECT * FROM RTGX."MessageInMX" ORDER BY "TmCreateBAH" DESC FETCH FIRST 10 ROWS ONLY;
+def get_latest_confirmation_code(api_url="http://10.2.9.125:8001/TestApi/GetSentMessagesInfo"):
+    try:
+        response = requests.post(api_url, timeout=10)
+        response.raise_for_status()
 
-db2cli execsql -connstring "DATABASE=DB2B;HOSTNAME=10.10.10.10;PORT=555;PROTOCOL=TCPIP;UID=user1;PWD=pass11" -inputsql test.sql
+        messages = response.json()
+
+        if not messages:
+            raise ValueError("РќРµС‚ СЃРѕРѕР±С‰РµРЅРёР№ РІ РѕС‚РІРµС‚Рµ API")
+
+        last_message = messages[-1]
+
+        message_text = last_message["message"]
+
+        code_match = re.search(r'(\d{4})', message_text)
+
+        if code_match:
+            confirmation_code = code_match.group(1)
+            print(f"РќР°Р№РґРµРЅ РєРѕРґ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ: {confirmation_code}")
+            return confirmation_code
+        else:
+            print(f"РљРѕРґ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РЅРµ РЅР°Р№РґРµРЅ РІ СЃРѕРѕР±С‰РµРЅРёРё: {message_text}")
+            return None
+
+    except requests.exceptions.RequestException as e:
+        print(f"РћС€РёР±РєР° РїСЂРё Р·Р°РїСЂРѕСЃРµ Рє API: {e}")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"РћС€РёР±РєР° РїР°СЂСЃРёРЅРіР° JSON: {e}")
+        return None
+    except Exception as e:
+        print(f"РќРµРѕР¶РёРґР°РЅРЅР°СЏ РѕС€РёР±РєР°: {e}")
+        return None
+
+def handle_code_input(page):
+    confirmation_code = get_latest_confirmation_code()
+
+    if confirmation_code:
+        try:
+            code_input = driver.find_element(By.CSS_SELECTOR,
+                                             "input[placeholder='РЎРµР°РЅСЃРѕРІС‹Р№ РєР»СЋС‡']")
+            code_input.send_keys(confirmation_code)
+            print(f"Р’РІРµРґРµРЅ РєРѕРґ: {confirmation_code}")
+
+            confirm_button = driver.find_element(By.XPATH, "//button[contains(text(), 'Р’РѕР№С‚Рё')]")
+            confirm_button.click()
+            time.sleep(2)
+        except Exception as e:
+            print(f"РќРµ СѓРґР°Р»РѕСЃСЊ РЅР°Р№С‚Рё РїРѕР»Рµ РґР»СЏ РІРІРѕРґР° РєРѕРґР°: {e}")
+    else:
+        print("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РєРѕРґ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РёР· API")
+
+    try:
+        assert "Р’РІРµРґРёС‚Рµ СЃРµР°РЅСЃРѕРІС‹Р№ РєР»СЋС‡" in driver.page_source
+        print("РўРµРєСЃС‚ 'Р’РІРµРґРёС‚Рµ СЃРµР°РЅСЃРѕРІС‹Р№ РєР»СЋС‡' РЅР°Р№РґРµРЅ РЅР° СЃС‚СЂР°РЅРёС†Рµ")
+    except AssertionError:
+        print("Р’РІРµРґРёС‚Рµ СЃРµР°РЅСЃРѕРІС‹Р№ РєР»СЋС‡' РЅРµ РЅР°Р№РґРµРЅ РЅР° СЃС‚СЂР°РЅРёС†Рµ")
+        raise
+
+    time.sleep(3)
