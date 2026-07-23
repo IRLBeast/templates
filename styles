@@ -1,62 +1,25 @@
-import re
-import requests
-import json
-from playwright.sync_api import Page, expect
+def handle_session_modal_advanced(driver):
 
-def get_latest_confirmation_code(api_url="http://10.2.9.125:8001/TestApi/GetSentMessagesInfo"):
-    try:
-        response = requests.post(api_url, timeout=10)
-        response.raise_for_status()
-        messages = response.json()
-
-        if not messages:
-            raise ValueError("Нет сообщений в ответе API")
-
-        last_message = messages[-1]
-        message_text = last_message["message"]
-
-        code_match = re.search(r'(\d{4})', message_text)
-        if code_match:
-            confirmation_code = code_match.group(1)
-            print(f"Найден код подтверждения: {confirmation_code}")
-            return confirmation_code
-        else:
-            print(f"Код подтверждения не найден в сообщении: {message_text}")
-            return None
-
-    except Exception as e:
-        print(f"Ошибка при получении кода: {e}")
-        return None
-
-def handle_code_input(page: Page):
-    confirmation_code = get_latest_confirmation_code()
+    max_wait = 3  # Максимальное время ожидания окна
     
-    if not confirmation_code:
-        print("Не удалось получить код подтверждения из API")
-        return
-
     try:
-        # Ожидаем появление поля с таймаутом
-        code_input = page.locator("input[placeholder='Сеансовый ключ']")
-        code_input.wait_for(state="visible", timeout=10000)
-        code_input.fill(confirmation_code)
-        print(f"Введен код: {confirmation_code}")
-
-        # Нажимаем кнопку и ждем реакции
-        confirm_button = page.locator("button:has-text('Войти')")
-        confirm_button.click()
+        # Ожидаем появления текста окна
+        WebDriverWait(driver, max_wait).until(
+            EC.text_to_be_present_in_element((By.TAG_NAME, "body"), 
+                                           "Вход в систему уже осуществлен")
+        )
         
-        # Ожидаем, что страница обновилась или появился новый элемент
-        page.wait_for_load_state("networkidle", timeout=5000)
-
+        print("Обнаружено окно дублирующей сессии")
+        
+        annul_button = driver.find_element(By.ID, "form-popup-confirm")
+        annul_button.click()
+        print("Нажата кнопка 'Аннулировать'")
+        
+        return True
+        
+    except TimeoutException:
+        print(f"Окно дублирующей сессии не появилось в течение {max_wait} секунд")
+        return False
     except Exception as e:
-        print(f"Ошибка при вводе кода: {e}")
-        raise
-
-    # Проверяем наличие текста
-    try:
-        await expect(page.locator("text='Введите сеансовый ключ'")).to_be_visible(timeout=5000)
-        print("Текст 'Введите сеансовый ключ' найден на странице")
-    except Exception as e:
-        print(f"'Введите сеансовый ключ' не найден: {e}")
-        raise
+        print(f"Неожиданная ошибка при проверке окна: {e}")
+        return False
