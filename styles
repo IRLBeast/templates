@@ -11,11 +11,69 @@ conn_str = (
 
 try:
     conn = ibm_db.connect(conn_str, "", "")
+    print("Connected\n")
+
+    stmt = ibm_db.exec_immediate(conn, 
+        'SELECT * FROM RTGX."MessageInMX" ORDER BY "TmCreateBAH" DESC FETCH FIRST 10 ROWS ONLY')
+    
+    # Получаем имена столбцов
+    num_cols = ibm_db.num_fields(stmt)
+    headers = [ibm_db.field_name(stmt, i) for i in range(num_cols)]
+    print(" | ".join(headers))
+    print("-" * 80)
+    
+    # Выводим данные
+    while ibm_db.fetch_row(stmt):
+        row = []
+        for i in range(num_cols):
+            value = ibm_db.result(stmt, i)
+            row.append(str(value) if value is not None else "NULL")
+        print(" | ".join(row))
+
+    ibm_db.close(conn)
+
+except Exception as e:
+    print("error:", e)
+
+
+
+
+
+
+
+import ibm_db
+
+conn_str = (
+    "DATABASE=DB2B;"
+    "HOSTNAME=10.2.11.211;"
+    "PORT=7025;"
+    "PROTOCOL=TCPIP;"
+    "UID=user1;"
+    "PWD=pass11;"
+)
+
+try:
+    conn = ibm_db.connect(conn_str, "", "")
     print("Connected")
 
-    stmt = ibm_db.exec_immediate(conn,"SELECT * FROM RTGX.\"MessageInMX\" ORDER BY \"TmCreateBAH\" DESC FETCH FIRST 10 ROWS ONLY;")
+    stmt = ibm_db.exec_immediate(conn, 
+        'SELECT * FROM RTGX."MessageInMX" ORDER BY "TmCreateBAH" DESC FETCH FIRST 10 ROWS ONLY')
+    
+    # Получаем имена столбцов
+    num_cols = ibm_db.num_fields(stmt)
+    headers = [ibm_db.field_name(stmt, i) for i in range(num_cols)]
+    
+    # Собираем данные в список словарей
+    rows = []
     while ibm_db.fetch_row(stmt):
-        print(ibm_db.result(stmt, 0))
+        row_dict = {}
+        for i in range(num_cols):
+            row_dict[headers[i]] = ibm_db.result(stmt, i)
+        rows.append(row_dict)
+    
+    # Выводим
+    for row in rows:
+        print(row)  # Или обращайтесь к полям: row["TmCreateBAH"]
 
     ibm_db.close(conn)
 
