@@ -1,5 +1,23 @@
-Detected 64-bit Python
-      Pre-installed Db2 client detected in the system as C:\PROGRA~1\IBM\CLIDRI~1
-      Please make sure you have set IBM_DB_HOME = C:\PROGRA~1\IBM\CLIDRI~1 to avoid FileNotFoundError.
-      **Found DB2 ODBC Driver from PATH, so skipping the clidriver download.**
-      <string>:454: UserWarning: Detected usage of IBM Data Server Driver package. Ensure you have downloaded 64-bit package of IBM_Data_Server_Driver and retry the ibm_db module install
+import ibm_db
+
+conn_str = (
+    "DATABASE=DB2B;"
+    "HOSTNAME=10.2.11.211;"
+    "PORT=7025;"
+    "PROTOCOL=TCPIP;"
+    "UID=user1;"
+    "PWD=pass11;"
+)
+
+try:
+    conn = ibm_db.connect(conn_str, "", "")
+    print("Connected")
+
+    stmt = ibm_db.exec_immediate(conn,"SELECT * FROM RTGX.\"MessageInMX\" ORDER BY \"TmCreateBAH\" DESC FETCH FIRST 10 ROWS ONLY;")
+    while ibm_db.fetch_row(stmt):
+        print(ibm_db.result(stmt, 0))
+
+    ibm_db.close(conn)
+
+except Exception as e:
+    print("error:", e)
