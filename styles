@@ -1,9 +1,0 @@
-import ibm_db
-
-print("=" * 50)
-print("📦 Информация о ibm_db и CLIdriver")
-print("=" * 50)
-print(f"ibm_db version:      {ibm_db.__version__}")
-print(f"CLIdriver version:   {ibm_db.IBM_DB_VERSION}")
-print(f"CLIdriver path:      {ibm_db.IBM_DB_DIR}")
-print(f"CLIdriver license:   {ibm_db.IBM_DB_LICENSE}")
