@@ -11,59 +11,14 @@ conn_str = (
 
 try:
     conn = ibm_db.connect(conn_str, "", "")
-    print("Connected\n")
-
-    stmt = ibm_db.exec_immediate(conn, 
-        'SELECT * FROM RTGX."MessageInMX" ORDER BY "TmCreateBAH" DESC FETCH FIRST 10 ROWS ONLY')
-    
-    # Получаем имена столбцов
-    num_cols = ibm_db.num_fields(stmt)
-    headers = [ibm_db.field_name(stmt, i) for i in range(num_cols)]
-    print(" | ".join(headers))
-    print("-" * 80)
-    
-    # Выводим данные
-    while ibm_db.fetch_row(stmt):
-        row = []
-        for i in range(num_cols):
-            value = ibm_db.result(stmt, i)
-            row.append(str(value) if value is not None else "NULL")
-        print(" | ".join(row))
-
-    ibm_db.close(conn)
-
-except Exception as e:
-    print("error:", e)
-
-
-
-
-
-
-
-import ibm_db
-
-conn_str = (
-    "DATABASE=DB2B;"
-    "HOSTNAME=10.2.11.211;"
-    "PORT=7025;"
-    "PROTOCOL=TCPIP;"
-    "UID=user1;"
-    "PWD=pass11;"
-)
-
-try:
-    conn = ibm_db.connect(conn_str, "", "")
     print("Connected")
 
     stmt = ibm_db.exec_immediate(conn, 
-        'SELECT * FROM RTGX."MessageInMX" ORDER BY "TmCreateBAH" DESC FETCH FIRST 10 ROWS ONLY')
+        'SELECT "IdMessageInMX", "IdMessageIn", "TmIn", "CdErrorIn", "BizSvc", "BizMsgIdr", "MsgDefIdr", "NrBankSender", "CdAuthSender", "NrBankReceiver", "CdAuthReceiver" FROM RTGX."MessageInMX" ORDER BY "TmCreateBAH" DESC FETCH FIRST 10 ROWS ONLY')
     
-    # Получаем имена столбцов
     num_cols = ibm_db.num_fields(stmt)
     headers = [ibm_db.field_name(stmt, i) for i in range(num_cols)]
     
-    # Собираем данные в список словарей
     rows = []
     while ibm_db.fetch_row(stmt):
         row_dict = {}
@@ -73,9 +28,12 @@ try:
     
     # Выводим
     for row in rows:
-        print(row)  # Или обращайтесь к полям: row["TmCreateBAH"]
+        print(row)
 
     ibm_db.close(conn)
 
 except Exception as e:
     print("error:", e)
+
+
+{'IdMessageInMX': 300000069, 'IdMessageIn': '2026061100003234018', 'TmIn': datetime.datetime(2026, 7, 14, 15, 58, 29, 650581), 'CdErrorIn': 'Z00', 'BizSvc': 'BISS.camt.018.03', 'BizMsgIdr': '050UMRC202607140000000000039711', 'MsgDefIdr': 'camt.018.001.05', 'NrBankSender': '050', 'CdAuthSender': '00002G420000', 'NrBankReceiver': '050', 'CdAuthReceiver': '00001OP00000'}
