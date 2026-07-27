@@ -1,27 +1,9 @@
-from playwright.sync_api import Page, expect
+import ibm_db
 
-def handle_session_modal_advanced(page: Page):
-    max_wait = 3  # Максимальное время ожидания окна
-
-    try:
-        # Проверяем наличие текста
-        modal_text = page.locator("text='Вход в систему уже осуществлен'")
-        
-        # Ожидаем, что текст видим
-        expect(modal_text).to_be_visible(timeout=max_wait * 1000)
-        print("Обнаружено окно дублирующей сессии")
-
-        # Нажимаем кнопку "Аннулировать"
-        annul_button = page.locator("#form-popup-confirm")
-        expect(annul_button).to_be_visible(timeout=2000)
-        annul_button.click()
-        print("Нажата кнопка 'Аннулировать'")
-
-        # Ожидаем, что модальное окно исчезло
-        expect(modal_text).to_be_hidden(timeout=2000)
-        
-        return True
-
-    except Exception as e:
-        print(f"Окно дублирующей сессии не появилось в течение {max_wait} секунд: {e}")
-        return False
+print("=" * 50)
+print("📦 Информация о ibm_db и CLIdriver")
+print("=" * 50)
+print(f"ibm_db version:      {ibm_db.__version__}")
+print(f"CLIdriver version:   {ibm_db.IBM_DB_VERSION}")
+print(f"CLIdriver path:      {ibm_db.IBM_DB_DIR}")
+print(f"CLIdriver license:   {ibm_db.IBM_DB_LICENSE}")
