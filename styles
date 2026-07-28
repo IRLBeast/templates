@@ -1,274 +1,47 @@
-Этот шаблон рассчитан на пример с "десертами", поэтому в нем очень много лишнего. Для твоей задачи достаточно оставить только таблицу и поиск.
+<div id="customModal" class="custom-modal" style="display: block;">
+    <div class="custom-modal-content">
+        <span class="custom-close">?</span>
+        <h3 id="customModalTitle">Message text:</h3>
+        <div id="customModalContent" class="modal-content-container">
+            <div class="modal-content-wrapper">
+                <div class="modal-text">
+                    <p>
+                        Message
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-1. HTML
-Полностью замени содержимое <q-table> на это:
 
-<q-table
-    title="Сообщения DB2"
-    :data="data"
-    :columns="columns"
-    row-key="IdMessageInMX"
-    :filter="search"
->
-    <template v-slot:top-right>
-        <q-input dense debounce="300" color="primary" v-model="search" placeholder="Поиск">
-            <template v-slot:append>
-                <q-icon name="search" />
-            </template>
-        </q-input>
-    </template>
-</q-table>
-Здесь мы:
-
-убрали все чекбоксы;
-
-убрали собственную фильтрацию;
-
-оставили обычный поиск Quasar.
-
-2. data()
-Удалить полностью
-filterToggle: {
-    breakfast: true,
-    lunch: true,
-    dinner: true
-},
-Заменить columns
-Вместо
-
-columns: [
-   ...
-]
-поставить
-
-columns: [
-    {
-        name: "IdMessageInMX",
-        label: "IdMessageInMX",
-        field: "IdMessageInMX",
-        sortable: true,
-        align: "left"
-    },
-    {
-        name: "IdMessageIn",
-        label: "IdMessageIn",
-        field: "IdMessageIn",
-        sortable: true
-    },
-    {
-        name: "TmIn",
-        label: "TmIn",
-        field: "TmIn",
-        sortable: true
-    },
-    {
-        name: "CdErrorIn",
-        label: "CdErrorIn",
-        field: "CdErrorIn"
-    },
-    {
-        name: "BizSvc",
-        label: "BizSvc",
-        field: "BizSvc"
-    },
-    {
-        name: "BizMsgIdr",
-        label: "BizMsgIdr",
-        field: "BizMsgIdr"
-    },
-    {
-        name: "MsgDefIdr",
-        label: "MsgDefIdr",
-        field: "MsgDefIdr"
-    },
-    {
-        name: "NrBankSender",
-        label: "NrBankSender",
-        field: "NrBankSender"
-    },
-    {
-        name: "CdAuthSender",
-        label: "CdAuthSender",
-        field: "CdAuthSender"
-    },
-    {
-        name: "NrBankReceiver",
-        label: "NrBankReceiver",
-        field: "NrBankReceiver"
-    },
-    {
-        name: "CdAuthReceiver",
-        label: "CdAuthReceiver",
-        field: "CdAuthReceiver"
-    }
-],
-Заменить data
-Вместо
-
-data: [
-   ...
-]
-поставить
-
-data: []
-Пока массив пустой.
-
-3. Удалить computed
-Полностью удалить
-
-computed: {
-    showAll...
-    filter...
+modal.js:
+function initModal() {
+    const modal = document.getElementById('customModal');
+    const modalTitle = document.getElementById('customModalTitle');
+    const modalContent = document.getElementById('customModalContent');
+    
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('modal-btn')) {
+            e.preventDefault();
+            modalTitle.innerHTML = e.target.getAttribute('data-title');
+            modalContent.innerHTML = e.target.getAttribute('data-content');
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+        
+        if (e.target.classList.contains('custom-close') || 
+            e.target.classList.contains('custom-close-btn') ||
+            e.target === modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    });
 }
-Они больше не нужны.
 
-4. Удалить methods
-Полностью удалить
-
-methods: {
-    customFilter(...)
+if (document.readyState === 'complete') {
+    initModal();
+} else {
+    document.addEventListener('DOMContentLoaded', initModal);
+    window.addEventListener('load', initModal);
 }
-Quasar умеет искать сам.
-
-В итоге JS станет примерно таким:
-
-new Vue({
-    el: "#q-app",
-
-    data() {
-        return {
-            search: "",
-
-            columns: [
-                ...
-            ],
-
-            data: []
-        };
-    }
-});
-5. Теперь самое главное — как передать данные из Python
-Сейчас Python просто делает
-
-print(rows)
-Браузер этого не увидит.
-
-Нужно сделать API, которое будет отдавать JSON.
-
-Например, если у тебя Django.
-
-views.py
-from django.http import JsonResponse
-import ibm_db
-
-
-def get_messages(request):
-
-    conn_str = (
-        "DATABASE=DB2B;"
-        "HOSTNAME=10.2.11.211;"
-        "PORT=7025;"
-        "PROTOCOL=TCPIP;"
-        "UID=user1;"
-        "PWD=pass11;"
-    )
-
-    conn = ibm_db.connect(conn_str, "", "")
-
-    stmt = ibm_db.exec_immediate(
-        conn,
-        '''
-        SELECT
-            "IdMessageInMX",
-            "IdMessageIn",
-            "TmIn",
-            "CdErrorIn",
-            "BizSvc",
-            "BizMsgIdr",
-            "MsgDefIdr",
-            "NrBankSender",
-            "CdAuthSender",
-            "NrBankReceiver",
-            "CdAuthReceiver"
-        FROM RTGX."MessageInMX"
-        ORDER BY "TmCreateBAH" DESC
-        FETCH FIRST 10 ROWS ONLY
-        '''
-    )
-
-    headers = [
-        ibm_db.field_name(stmt, i)
-        for i in range(ibm_db.num_fields(stmt))
-    ]
-
-    rows = []
-
-    while ibm_db.fetch_row(stmt):
-        row = {}
-
-        for i, h in enumerate(headers):
-            value = ibm_db.result(stmt, i)
-
-            if hasattr(value, "isoformat"):
-                value = value.isoformat()
-
-            row[h] = value
-
-        rows.append(row)
-
-    ibm_db.close(conn)
-
-    return JsonResponse(rows, safe=False)
-Обрати внимание на
-
-value.isoformat()
-datetime нельзя напрямую отправить в JSON.
-
-urls.py
-path("api/messages/", views.get_messages),
-6. Загрузка данных во Vue
-Добавь в Vue
-
-mounted() {
-    fetch("/api/messages/")
-        .then(response => response.json())
-        .then(data => {
-            this.data = data;
-        });
-}
-Итоговый JS будет выглядеть примерно так:
-
-new Vue({
-    el: "#q-app",
-
-    data() {
-        return {
-            search: "",
-            columns: [...],
-            data: []
-        };
-    },
-
-    mounted() {
-        fetch("/api/messages/")
-            .then(r => r.json())
-            .then(data => {
-                this.data = data;
-            });
-    }
-});
-После открытия страницы произойдет следующее:
-
-Vue загрузится.
-
-Выполнится запрос на /api/messages/.
-
-Django подключится к DB2.
-
-Получит последние 10 сообщений.
-
-Вернет их в формате JSON.
-
-Vue положит их в this.data.
-
-Quasar автоматически построит таблицу.
