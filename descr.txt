@@ -1,75 +1,193 @@
-1. Добавь кнопку под таблицей
-После </q-table> добавь:
+Шаг 1. Создаем API для получения сообщения
+views.py
+Добавь новую функцию:
+from django.http import JsonResponse
+import ibm_db
+
+def get_message(request, message_id):
+    conn_str = (
+        "DATABASE=DB2B;"
+        "HOSTNAME=10.2.11.211;"
+        "PORT=7025;"
+        "PROTOCOL=TCPIP;"
+        "UID=user1;"
+        "PWD=pass11;"
+    )
+
+    conn = ibm_db.connect(conn_str, "", "")
+
+    sql = '''
+        SELECT "messageErr"
+        FROM RTGX."CrError"
+        WHERE "id_mess" = ?
+    '''
+
+    stmt = ibm_db.prepare(conn, sql)
+
+    ibm_db.bind_param(stmt, 1, message_id)
+
+    ibm_db.execute(stmt)
+
+    message = ""
+
+    if ibm_db.fetch_row(stmt):
+        message = ibm_db.result(stmt, 0)
+
+    ibm_db.close(conn)
+
+    return JsonResponse({
+        "message": message
+    })
+urls.py
+Добавь
+path(
+    "api/message/<int:message_id>",
+    get_message,
+    name="get_message"
+),
+Проверить можно открыв
+http://127.0.0.1:8000/api/message/300000069
+Должен прийти JSON.
+Шаг 2. Добавляем контекстное меню
+После </q-table> вставь
 HTML
-<div class="q-mt-md">
-    <q-btn
-        color="primary"
-        label="Обновить"
-        @click="loadData"
-    />
-</div>
-Если хочешь, можно выровнять кнопку по центру:
+<q-menu
+    ref="rowMenu"
+    context-menu
+    touch-position
+>
+    <q-list dense style="min-width:220px">
+
+        <q-item clickable v-close-popup @click="showMessage">
+            <q-item-section>
+                Показать сообщение
+            </q-item-section>
+        </q-item>
+
+        <q-item clickable v-close-popup>
+            <q-item-section>
+                Показать список
+            </q-item-section>
+        </q-item>
+
+    </q-list>
+</q-menu>
+<q-dialog v-model="messageDialog">
+
+    <q-card style="min-width:1000px; max-width:95vw;">
+
+        <q-card-section class="row items-center">
+
+            <div class="text-h6">
+                Message text
+            </div>
+
+            <q-space />
+
+            <q-btn
+                icon="close"
+                flat
+                round
+                dense
+                v-close-popup
+            />
+
+        </q-card-section>
+
+        <q-separator />
+
+        <q-card-section style="max-height:70vh; overflow:auto;">
+
+            <pre>{{ messageText }}</pre>
+
+        </q-card-section>
+
+    </q-card>
+
+</q-dialog>
+Шаг 3. Добавляем модальное окно Quasar
+Сразу после меню вставь
 HTML
-<div class="q-mt-md text-center">
-    <q-btn
-        color="primary"
-        icon="refresh"
-        label="Обновить"
-        @click="loadData"
-    />
-</div>
-2. Переделай JavaScript
-Вместо
-mounted() {
-    fetch("/api/messages")
-        .then(response => response.json())
-        .then(data => {
-            this.data = data;
-        });
-}
-сделай так:
-mounted() {
-    this.loadData();
+<pre> сохранит все переносы строк и форматирование XML.
+Шаг 4. Добавляем новые переменные
+В data() добавь
+selectedRow: null,
+
+messageDialog: false,
+
+messageText: "",
+Шаг 5. Ловим ПКМ
+У q-table добавь
+HTML
+@row-contextmenu="onRowContextMenu"
+Получится
+HTML
+<q-table
+    ...
+    @row-contextmenu="onRowContextMenu"
+>
+Шаг 6. Добавляем методы
+В methods добавь
+onRowContextMenu(evt, row) {
+
+    evt.preventDefault();
+
+    this.selectedRow = row;
+
+    this.$refs.rowMenu.show(evt);
+
 },
+Теперь добавь второй метод
+showMessage() {
 
-methods: {
-    loadData() {
-        fetch("/api/messages")
-            .then(response => response.json())
-            .then(data => {
-                this.data = data;
-            });
-    }
-}
-Теперь происходит следующее:
-при открытии страницы вызывается loadData();
-при нажатии на кнопку "Обновить" вызывается эта же функция;
-код не дублируется.
-3. Можно сделать еще удобнее
-Во время обновления можно блокировать кнопку и показывать индикатор загрузки.
-В data() добавить:
-loading: false,
-А функцию изменить:
-loadData() {
-    this.loading = true;
-
-    fetch("/api/messages")
-        .then(response => response.json())
+    fetch(`/api/message/${this.selectedRow.IdMessageInMX}`)
+        .then(r => r.json())
         .then(data => {
-            this.data = data;
-        })
-        .finally(() => {
-            this.loading = false;
+
+            this.messageText = data.message;
+
+            this.messageDialog = true;
+
         });
-}
-И кнопку:
+
+},
+Шаг 7. Что получится
+Теперь работа будет такой:
+ПКМ по строке
+        │
+        ▼
+Контекстное меню
+        │
+        ▼
+Показать сообщение
+        │
+        ▼
+fetch("/api/message/300000069")
+        │
+        ▼
+Django
+        │
+        ▼
+DB2
+        │
+        ▼
+SELECT messageErr ...
+        │
+        ▼
+JSON
+        │
+        ▼
+Vue
+        │
+        ▼
+QDialog
+Шаг 8. Я бы сразу сделал небольшое улучшение
+Раз сообщение хранится в messageErr, скорее всего это XML. Тогда вместо
 HTML
-<q-btn
-    color="primary"
-    icon="refresh"
-    label="Обновить"
-    :loading="loading"
-    @click="loadData"
-/>
-Тогда при запросе на кнопке появится анимация загрузки, и пользователь не сможет случайно нажать ее несколько раз подряд.
-Это особенно удобно, если запрос к DB2 занимает несколько секунд.
+<pre>{{ messageText }}</pre>
+лучше использовать
+HTML
+<pre style="white-space: pre-wrap; word-break: break-word;">
+{{ messageText }}
+</pre>
+Это позволит длинным строкам XML переноситься по словам, а не растягивать диалог на несколько экранов.
