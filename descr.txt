@@ -1,18 +1,75 @@
-import subprocess
-import os
+1. Добавь кнопку под таблицей
+После </q-table> добавь:
+HTML
+<div class="q-mt-md">
+    <q-btn
+        color="primary"
+        label="Обновить"
+        @click="loadData"
+    />
+</div>
+Если хочешь, можно выровнять кнопку по центру:
+HTML
+<div class="q-mt-md text-center">
+    <q-btn
+        color="primary"
+        icon="refresh"
+        label="Обновить"
+        @click="loadData"
+    />
+</div>
+2. Переделай JavaScript
+Вместо
+mounted() {
+    fetch("/api/messages")
+        .then(response => response.json())
+        .then(data => {
+            this.data = data;
+        });
+}
+сделай так:
+mounted() {
+    this.loadData();
+},
 
-os.chdir(r"C:\Program Files\IBM\clidriver\bin")
+methods: {
+    loadData() {
+        fetch("/api/messages")
+            .then(response => response.json())
+            .then(data => {
+                this.data = data;
+            });
+    }
+}
+Теперь происходит следующее:
+при открытии страницы вызывается loadData();
+при нажатии на кнопку "Обновить" вызывается эта же функция;
+код не дублируется.
+3. Можно сделать еще удобнее
+Во время обновления можно блокировать кнопку и показывать индикатор загрузки.
+В data() добавить:
+loading: false,
+А функцию изменить:
+loadData() {
+    this.loading = true;
 
-command = (
-    'db2cli execsql -connstring "DATABASE=DB2B;HOSTNAME=10.10.10.10;PORT=555;'
-    'PROTOCOL=TCPIP;UID=user1;PWD=pass11" -inputsql test.sql'
-)
-
-result = subprocess.run(command, shell=True, capture_output=True, text=True)
-
-print("STDOUT:")
-print(result.stdout)
-
-if result.stderr:
-    print("STDERR:")
-    print(result.stderr)
+    fetch("/api/messages")
+        .then(response => response.json())
+        .then(data => {
+            this.data = data;
+        })
+        .finally(() => {
+            this.loading = false;
+        });
+}
+И кнопку:
+HTML
+<q-btn
+    color="primary"
+    icon="refresh"
+    label="Обновить"
+    :loading="loading"
+    @click="loadData"
+/>
+Тогда при запросе на кнопке появится анимация загрузки, и пользователь не сможет случайно нажать ее несколько раз подряд.
+Это особенно удобно, если запрос к DB2 занимает несколько секунд.
