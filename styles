@@ -1,47 +1,28 @@
-<div id="customModal" class="custom-modal" style="display: block;">
-    <div class="custom-modal-content">
-        <span class="custom-close">?</span>
-        <h3 id="customModalTitle">Message text:</h3>
-        <div id="customModalContent" class="modal-content-container">
-            <div class="modal-content-wrapper">
-                <div class="modal-text">
-                    <p>
-                        Message
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+SELECT t1."MsgText"
+        FROM RTGX."MessageGet" t1
+        RIGHT JOIN RTGX."MessageInMX" t2 ON t1."IdMessageGet" = t2."IdMessageInMX"
+        WHERE t2."IdMessageInMX" = ?
 
 
-modal.js:
-function initModal() {
-    const modal = document.getElementById('customModal');
-    const modalTitle = document.getElementById('customModalTitle');
-    const modalContent = document.getElementById('customModalContent');
-    
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('modal-btn')) {
-            e.preventDefault();
-            modalTitle.innerHTML = e.target.getAttribute('data-title');
-            modalContent.innerHTML = e.target.getAttribute('data-content');
-            modal.style.display = 'block';
-            document.body.style.overflow = 'hidden';
-        }
-        
-        if (e.target.classList.contains('custom-close') || 
-            e.target.classList.contains('custom-close-btn') ||
-            e.target === modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = '';
-        }
-    });
-}
+[Vue warn]: Error in v-on handler: "TypeError: Cannot read properties of null (reading 'IdMessageInMX')"
 
-if (document.readyState === 'complete') {
-    initModal();
-} else {
-    document.addEventListener('DOMContentLoaded', initModal);
-    window.addEventListener('load', initModal);
-}
+found in
+
+---> <QItem>
+       <QList>
+         <QPortal>
+           <QMenu>
+             <Root>
+warn$2	@	vue.js:5129
+
+
+TypeError: Cannot read properties of null (reading 'IdMessageInMX')
+    at Vue.showMessage (table.js:38:44)
+    at invokeWithErrorHandling (vue.js:3718:32)
+    at VueComponent.invoker (vue.js:1540:22)
+    at invokeWithErrorHandling (vue.js:3718:32)
+    at Vue.$emit (vue.js:2799:19)
+    at VueComponent.__onClick (umd.min.js:10813:22)
+    at invokeWithErrorHandling (vue.js:3718:32)
+    at HTMLDivElement.invoker (vue.js:1540:22)
+    at original_1._wrapper (vue.js:8038:37)
