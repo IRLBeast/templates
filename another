@@ -1,85 +1,76 @@
-Шаг 1. Добавить разделители Vue
-В самом начале new Vue({ добавь:
-new Vue({
-    el: '#q-app',
+Шаг 1. Добавляем новую переменную
+В data() вместо selectedRow (или рядом с ней) добавь:
+selectedMessageId: null,
+Шаг 2. Переделываем attachContextMenu()
+Заменяешь ее полностью на:
+attachContextMenu() {
+    this.$nextTick(() => {
 
-    delimiters: ['[[', ']]'],
+        const rows = document.querySelectorAll("tbody tr");
 
-    data() {
-        ...
-После этого во всем Vue-шаблоне вместо
-HTML
-{{ messageText }}
-нужно будет писать
-HTML
-[[ messageText ]]
-Django больше не будет пытаться обработать выражения Vue.
-Шаг 2. Изменить QDialog
+        rows.forEach((tr) => {
+
+            tr.oncontextmenu = (e) => {
+
+                e.preventDefault();
+
+                // Первая ячейка содержит IdMessageInMX
+                this.selectedMessageId = tr.cells[0].innerText.trim();
+
+                console.log("ID:", this.selectedMessageId);
+
+                this.$refs.rowMenu.show(e);
+
+            };
+
+        });
+
+    });
+},
+Здесь мы берем не индекс, а текст первой ячейки строки.
+Шаг 3. Переделываем showMessage()
 Было:
-HTML
-<pre>{{ messageText }}</pre>
+showMessage() {
+
+    fetch(`/api/message/${this.selectedRow.IdMessageInMX}`)
+        .then(r => r.json())
+        .then(data => {
+            this.messageText = data.message;
+            this.messageDialog = true;
+        });
+
+},
 Станет:
-HTML
-<pre>[[ messageText ]]</pre>
-Шаг 3. Изменить строку поиска (если где-то используется вывод Vue)
-Все места, где ты сама выводишь данные Vue через {{ ... }}, нужно заменить на [[ ... ]].
-Например:
-HTML
-<div>[[ messageText ]]</div>
-А вот директивы вроде
-HTML
-v-model
-@click
-:data
-:columns
-не меняются вообще.
-Шаг 4. Теперь переписываем только тело таблицы
-Оставляем <q-table> практически как был.
-Внутрь него добавляем:
-HTML
-<template v-slot:body="props">
+showMessage() {
 
-    <q-tr
-        :props="props"
-        @contextmenu.prevent="openContextMenu($event, props.row)"
-    >
+    fetch(`/api/message/${this.selectedMessageId}`)
+        .then(r => r.json())
+        .then(data => {
 
-        <q-td
-            v-for="col in props.cols"
-            :key="col.name"
-        >
-            [[ getCellValue(props.row, col) ]]
-        </q-td>
+            this.messageText = data.message;
 
-    </q-tr>
+            this.messageDialog = true;
 
-</template>
-Обрати внимание:
-Мы больше не пишем
-props.row[col.field]
-в шаблоне.
-Шаг 5. Добавляем метод
-В methods:
-getCellValue(row, col) {
-
-    if (typeof col.field === "function") {
-        return col.field(row);
-    }
-
-    return row[col.field];
+        });
 
 },
-Он умеет работать и если
-field: "IdMessageInMX"
-и если
-field: row => row.IdMessageInMX
-Шаг 6. Контекстное меню
-Теперь метод становится очень простым:
-openContextMenu(evt, row) {
+Шаг 4. После загрузки данных
+Оставляем как было:
+loadData() {
+    this.loading = true;
 
-    this.selectedRow = row;
+    fetch("/api/messages")
+        .then(response => response.json())
+        .then(data => {
 
-    this.$refs.rowMenu.show(evt);
+            this.data = data;
 
+            this.attachContextMenu();
+
+        })
+        .finally(() => {
+
+            this.loading = false;
+
+        });
 },
-Больше никаких querySelector, index, data-row-key.
