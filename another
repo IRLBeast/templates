@@ -1,76 +1,13 @@
-Шаг 1. Добавляем новую переменную
-В data() вместо selectedRow (или рядом с ней) добавь:
-selectedMessageId: null,
-Шаг 2. Переделываем attachContextMenu()
-Заменяешь ее полностью на:
-attachContextMenu() {
+.then(data => {
+
+    this.messageText = data.message;
+
+    console.log("messageText =", this.messageText);
+
+    this.messageDialog = true;
+
     this.$nextTick(() => {
-
-        const rows = document.querySelectorAll("tbody tr");
-
-        rows.forEach((tr) => {
-
-            tr.oncontextmenu = (e) => {
-
-                e.preventDefault();
-
-                // Первая ячейка содержит IdMessageInMX
-                this.selectedMessageId = tr.cells[0].innerText.trim();
-
-                console.log("ID:", this.selectedMessageId);
-
-                this.$refs.rowMenu.show(e);
-
-            };
-
-        });
-
+        console.log("DOM:", document.querySelector("pre").innerText);
     });
-},
-Здесь мы берем не индекс, а текст первой ячейки строки.
-Шаг 3. Переделываем showMessage()
-Было:
-showMessage() {
 
-    fetch(`/api/message/${this.selectedRow.IdMessageInMX}`)
-        .then(r => r.json())
-        .then(data => {
-            this.messageText = data.message;
-            this.messageDialog = true;
-        });
-
-},
-Станет:
-showMessage() {
-
-    fetch(`/api/message/${this.selectedMessageId}`)
-        .then(r => r.json())
-        .then(data => {
-
-            this.messageText = data.message;
-
-            this.messageDialog = true;
-
-        });
-
-},
-Шаг 4. После загрузки данных
-Оставляем как было:
-loadData() {
-    this.loading = true;
-
-    fetch("/api/messages")
-        .then(response => response.json())
-        .then(data => {
-
-            this.data = data;
-
-            this.attachContextMenu();
-
-        })
-        .finally(() => {
-
-            this.loading = false;
-
-        });
-},
+});
