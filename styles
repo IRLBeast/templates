@@ -1,28 +1,40 @@
-SELECT t1."MsgText"
-        FROM RTGX."MessageGet" t1
-        RIGHT JOIN RTGX."MessageInMX" t2 ON t1."IdMessageGet" = t2."IdMessageInMX"
-        WHERE t2."IdMessageInMX" = ?
+<q-table
+    title="РЎРѕРѕР±С‰РµРЅРёСЏ DB2B"
+    :data="data"
+    :columns="columns"
+    row-key="IdMessageInMX"
+    :filter="search"
+    @row-contextmenu="onRowContextMenu">
 
 
-[Vue warn]: Error in v-on handler: "TypeError: Cannot read properties of null (reading 'IdMessageInMX')"
+methods: {
 
-found in
+    onRowContextMenu(evt, row) {
+    evt.preventDefault();
+    this.selectedRow = row;
+    this.$refs.rowMenu.show(evt);
+    },
 
----> <QItem>
-       <QList>
-         <QPortal>
-           <QMenu>
-             <Root>
-warn$2	@	vue.js:5129
+    showMessage() {
+    fetch(`/api/message/${this.selectedRow.IdMessageInMX}`)
+        .then(r => r.json())
+        .then(data => {
+            this.messageText = data.message;
+            this.messageDialog = true;
+        });
+    },
 
 
-TypeError: Cannot read properties of null (reading 'IdMessageInMX')
-    at Vue.showMessage (table.js:38:44)
-    at invokeWithErrorHandling (vue.js:3718:32)
-    at VueComponent.invoker (vue.js:1540:22)
-    at invokeWithErrorHandling (vue.js:3718:32)
-    at Vue.$emit (vue.js:2799:19)
-    at VueComponent.__onClick (umd.min.js:10813:22)
-    at invokeWithErrorHandling (vue.js:3718:32)
-    at HTMLDivElement.invoker (vue.js:1540:22)
-    at original_1._wrapper (vue.js:8038:37)
+    loadData() {
+    this.loading = true;
+
+    fetch("/api/messages")
+        .then(response => response.json())
+        .then(data => {
+            this.data = data;
+        })
+        .finally(() => {
+            this.loading = false;
+        });
+    }
+}
