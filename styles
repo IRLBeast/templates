@@ -1,0 +1,22 @@
+columns: [
+    {name: "IdMessageInMX", label: "IdMessageInMX", field: "IdMessageInMX", sortable: true, align: "left"},
+    {name: "IdMessageIn", label: "IdMessageIn", field: "IdMessageIn", sortable: true},
+    {name: "TmIn", label: "TmIn", field: "TmIn", sortable: true},
+    {name: "CdErrorIn", label: "CdErrorIn", field: "CdErrorIn"},
+    {name: "BizSvc", label: "BizSvc", field: "BizSvc"},
+    {name: "BizMsgIdr", label: "BizMsgIdr", field: "BizMsgIdr"},
+    {name: "MsgDefIdr", label: "MsgDefIdr", field: "MsgDefIdr"},
+    {name: "NrBankSender", label: "NrBankSender", field: "NrBankSender"},
+    {name: "CdAuthSender", label: "CdAuthSender", field: "CdAuthSender"},
+    {name: "NrBankReceiver", label: "NrBankReceiver", field: "NrBankReceiver"},
+    {name: "CdAuthReceiver", label: "CdAuthReceiver", field: "CdAuthReceiver"}
+],
+
+SELECT "IdMessageOutMX", "TmOut", "NrBankSender", "CdAuthSender", "NrBankReceiver", "CdAuthReceiver",
+"BizSvc", "BizMsgIdr", "MsgDefIdr", "IdMessageInMX"
+FROM RTGX."MessageOutMX"
+WHERE "IdMessageInMX" = ?
+
+SELECT "MsgText"
+FROM RTGX."MessageOutMX"
+WHERE "IdMessageInMX" = ?
