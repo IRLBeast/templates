@@ -1,27 +1,36 @@
-<link rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
-Можно выбрать и другую тему (например vs, atom-one-light, stackoverflow-light).
-2. Подключи библиотеку
-Перед script.js добавь:
-HTML
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/xml.min.js"></script>
-3. Измени модальное окно
-HTML
-<q-card-section>
-    <pre><code ref="xmlCode" class="language-xml"></code></pre>
-</q-card-section>
-4. После получения XML
-Вместо
-this.messageDialog = true;
-сделай
-this.messageDialog = true;
+attachContextMenu() {
+    this.$nextTick(() => {
 
-this.$nextTick(() => {
-    this.$refs.xmlCode.textContent = this.messageText;
-    hljs.highlightElement(this.$refs.xmlCode);
-});
-И получится полноценная подсветка XML:
-теги будут синими;
-атрибуты — красными;
-строки — другого цвета.
+        const tbody = this.$el.querySelector("tbody");
+
+        if (!tbody) {
+            return;
+        }
+
+        // Чтобы не повесить обработчик дважды
+        if (tbody._contextMenuAttached) {
+            return;
+        }
+
+        tbody._contextMenuAttached = true;
+
+        tbody.addEventListener("contextmenu", (e) => {
+
+            const tr = e.target.closest("tr");
+
+            if (!tr) {
+                return;
+            }
+
+            e.preventDefault();
+
+            this.selectedMessageId = tr.cells[0].innerText.trim();
+
+            console.log("ID:", this.selectedMessageId);
+
+            this.$refs.rowMenu.show(e);
+
+        });
+
+    });
+}
