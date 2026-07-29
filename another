@@ -1,36 +1,200 @@
-attachContextMenu() {
-    this.$nextTick(() => {
+Шаг 1. Добавляем режим таблицы
+В data() добавляем:
+tableMode: "incoming",
+Он будет принимать значения:
+"incoming"
+"outgoing"
+Шаг 2. Две конфигурации колонок
+Текущие columns я бы переименовал в
+incomingColumns: [
+    ...
+],
+и добавил
+outgoingColumns: [
 
-        const tbody = this.$el.querySelector("tbody");
+    {
+        name: "IdMessageOutMX",
+        label: "IdMessageOutMX",
+        field: "IdMessageOutMX",
+        sortable: true
+    },
 
-        if (!tbody) {
-            return;
-        }
+    {
+        name: "TmOut",
+        label: "TmOut",
+        field: "TmOut",
+        sortable: true
+    },
 
-        // Чтобы не повесить обработчик дважды
-        if (tbody._contextMenuAttached) {
-            return;
-        }
+    {
+        name: "NrBankSender",
+        label: "NrBankSender",
+        field: "NrBankSender"
+    },
 
-        tbody._contextMenuAttached = true;
+    {
+        name: "CdAuthSender",
+        label: "CdAuthSender",
+        field: "CdAuthSender"
+    },
 
-        tbody.addEventListener("contextmenu", (e) => {
+    {
+        name: "NrBankReceiver",
+        label: "NrBankReceiver",
+        field: "NrBankReceiver"
+    },
 
-            const tr = e.target.closest("tr");
+    {
+        name: "CdAuthReceiver",
+        label: "CdAuthReceiver",
+        field: "CdAuthReceiver"
+    },
 
-            if (!tr) {
-                return;
-            }
+    {
+        name: "BizSvc",
+        label: "BizSvc",
+        field: "BizSvc"
+    },
 
-            e.preventDefault();
+    {
+        name: "BizMsgIdr",
+        label: "BizMsgIdr",
+        field: "BizMsgIdr"
+    },
 
-            this.selectedMessageId = tr.cells[0].innerText.trim();
+    {
+        name: "MsgDefIdr",
+        label: "MsgDefIdr",
+        field: "MsgDefIdr"
+    },
 
-            console.log("ID:", this.selectedMessageId);
+    {
+        name: "IdMessageInMX",
+        label: "IdMessageInMX",
+        field: "IdMessageInMX"
+    }
 
-            this.$refs.rowMenu.show(e);
+],
+Шаг 3. В q-table
+Вместо
+HTML
+:columns="columns"
+делаем
+HTML
+:columns="tableMode === 'incoming'
+            ? incomingColumns
+            : outgoingColumns"
+Шаг 4. Меняется только data
+Вообще массив
+data: []
+можно оставить один.
+Просто в него загружаются разные запросы.
+Шаг 5. Django
+Добавляем новую view
+def get_outgoing_messages(request, message_id):
+которая выполняет
+SELECT
+    "IdMessageOutMX",
+    "TmOut",
+    "NrBankSender",
+    "CdAuthSender",
+    "NrBankReceiver",
+    "CdAuthReceiver",
+    "BizSvc",
+    "BizMsgIdr",
+    "MsgDefIdr",
+    "IdMessageInMX"
+FROM RTGX."MessageOutMX"
+WHERE "IdMessageInMX" = ?
+и возвращает JSON точно так же, как сейчас делает get_messages.
+Шаг 6. Новый метод
+showOutgoing() {
+
+    fetch(`/api/outgoing/${this.selectedMessageId}`)
+
+        .then(r => r.json())
+
+        .then(data => {
+
+            this.data = data;
+
+            this.tableMode = "outgoing";
+
+            this.$nextTick(() => {
+                this.attachContextMenu();
+            });
 
         });
 
-    });
-}
+},
+Шаг 7. Кнопка ПКМ
+Сейчас
+Получить текст сообщения
+
+Исходящие сообщения
+Делаем
+HTML
+<q-item
+    v-if="tableMode === 'incoming'"
+    clickable
+    v-close-popup
+    @click="showOutgoing">
+
+    <q-item-section>
+        Исходящие сообщения
+    </q-item-section>
+
+</q-item>
+То есть во втором режиме эта кнопка вообще исчезнет.
+Шаг 8. Просмотр XML
+Тут я бы сделал одно улучшение.
+Сейчас
+showMessage()
+всегда вызывает
+/api/message/
+Лучше сделать так:
+showMessage() {
+
+    let url;
+
+    if (this.tableMode === "incoming") {
+
+        url = `/api/message/${this.selectedMessageId}`;
+
+    } else {
+
+        url = `/api/outgoing_message/${this.selectedMessageId}`;
+
+    }
+
+    fetch(url)
+
+        .then(r => r.json())
+
+        .then(data => {
+
+            this.messageText = data.message;
+
+            this.messageDialog = true;
+
+        });
+
+},
+Тогда кнопка просмотра XML вообще останется одна.
+Шаг 9. Кнопка "Вернуться"
+Под таблицей:
+HTML
+<q-btn
+    v-if="tableMode === 'outgoing'"
+    color="primary"
+    label="Вернуться к входящим сообщениям"
+    @click="loadIncoming"
+/>
+И метод
+loadIncoming() {
+
+    this.tableMode = "incoming";
+
+    this.loadData();
+
+},
