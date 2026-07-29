@@ -1,1 +1,15 @@
-'[col.field]' from 'props.row[col.field]'
+<q-table
+    title="РЎРѕРѕР±С‰РµРЅРёСЏ DB2B"
+    :data="data"
+    :columns="columns"
+    row-key="IdMessageInMX"
+    :filter="search"
+    @row-contextmenu="onRowContextMenu">
+    <template v-slot:top-right>
+        <q-input dense debounce="300" color="primary" v-model="search" placeholder="РџРѕРёСЃРє">
+            <template v-slot:append>
+                <q-icon name="search" />
+            </template>
+        </q-input>
+    </template>
+</q-table>
