@@ -1,29 +1,85 @@
-attachContextMenu() {
+Шаг 1. Добавить разделители Vue
+В самом начале new Vue({ добавь:
+new Vue({
+    el: '#q-app',
 
-    this.$nextTick(() => {
+    delimiters: ['[[', ']]'],
 
-        const rows = document.querySelectorAll("tbody tr");
+    data() {
+        ...
+После этого во всем Vue-шаблоне вместо
+HTML
+{{ messageText }}
+нужно будет писать
+HTML
+[[ messageText ]]
+Django больше не будет пытаться обработать выражения Vue.
+Шаг 2. Изменить QDialog
+Было:
+HTML
+<pre>{{ messageText }}</pre>
+Станет:
+HTML
+<pre>[[ messageText ]]</pre>
+Шаг 3. Изменить строку поиска (если где-то используется вывод Vue)
+Все места, где ты сама выводишь данные Vue через {{ ... }}, нужно заменить на [[ ... ]].
+Например:
+HTML
+<div>[[ messageText ]]</div>
+А вот директивы вроде
+HTML
+v-model
+@click
+:data
+:columns
+не меняются вообще.
+Шаг 4. Теперь переписываем только тело таблицы
+Оставляем <q-table> практически как был.
+Внутрь него добавляем:
+HTML
+<template v-slot:body="props">
 
-        rows.forEach((tr) => {
+    <q-tr
+        :props="props"
+        @contextmenu.prevent="openContextMenu($event, props.row)"
+    >
 
-            tr.oncontextmenu = (e) => {
+        <q-td
+            v-for="col in props.cols"
+            :key="col.name"
+        >
+            [[ getCellValue(props.row, col) ]]
+        </q-td>
 
-                e.preventDefault();
+    </q-tr>
 
-                const key = tr.getAttribute("data-row-key");
+</template>
+Обрати внимание:
+Мы больше не пишем
+props.row[col.field]
+в шаблоне.
+Шаг 5. Добавляем метод
+В methods:
+getCellValue(row, col) {
 
-                this.selectedRow = this.data.find(
-                    item => String(item.IdMessageInMX) === key
-                );
+    if (typeof col.field === "function") {
+        return col.field(row);
+    }
 
-                console.log(this.selectedRow);
-
-                this.$refs.rowMenu.show(e);
-
-            };
-
-        });
-
-    });
+    return row[col.field];
 
 },
+Он умеет работать и если
+field: "IdMessageInMX"
+и если
+field: row => row.IdMessageInMX
+Шаг 6. Контекстное меню
+Теперь метод становится очень простым:
+openContextMenu(evt, row) {
+
+    this.selectedRow = row;
+
+    this.$refs.rowMenu.show(evt);
+
+},
+Больше никаких querySelector, index, data-row-key.
