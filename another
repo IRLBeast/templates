@@ -1,46 +1,29 @@
-Первое, что нужно проверить
-Покажи, пожалуйста, как сейчас выглядит твой тег <q-table>.
-Особенно интересует, есть ли там строка
-HTML
-@row-contextmenu="onRowContextMenu"
-и полностью ли выглядит тег примерно так:
-HTML
-<q-table
-    ...
-    @row-contextmenu="onRowContextMenu"
->
-Второе
-Покажи метод
-onRowContextMenu(...)
-который сейчас находится в methods.
-Скорее всего проблема вот в чем
-В разных версиях Quasar событие row-contextmenu передает параметры в разном порядке.
-Я написал вариант
-onRowContextMenu(evt, row)
-но у тебя вполне может приходить наоборот:
-onRowContextMenu(row, evt)
-или вообще объект другого вида.
-Самый быстрый способ проверить — временно заменить метод на
-onRowContextMenu() {
-    console.log(arguments);
-}
-После ПКМ посмотри в консоль, что именно выводится.
-Например, если увидишь
-Arguments(2)
-0: MouseEvent
-1: {IdMessageInMX: 300000069, ...}
-то всё правильно.
-Если увидишь
-Arguments(2)
-0: {IdMessageInMX: 300000069, ...}
-1: MouseEvent
-значит параметры нужно просто поменять местами:
-onRowContextMenu(row, evt) {
+attachContextMenu() {
 
-    evt.preventDefault();
+    this.$nextTick(() => {
 
-    this.selectedRow = row;
+        const rows = document.querySelectorAll("tbody tr");
 
-    this.$refs.rowMenu.show(evt);
+        rows.forEach((tr) => {
 
-}
+            tr.oncontextmenu = (e) => {
+
+                e.preventDefault();
+
+                const key = tr.getAttribute("data-row-key");
+
+                this.selectedRow = this.data.find(
+                    item => String(item.IdMessageInMX) === key
+                );
+
+                console.log(this.selectedRow);
+
+                this.$refs.rowMenu.show(e);
+
+            };
+
+        });
+
+    });
+
+},
