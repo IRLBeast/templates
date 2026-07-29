@@ -1,33 +1,46 @@
-<q-dialog v-model="messageDialog">
+Первое, что нужно проверить
+Покажи, пожалуйста, как сейчас выглядит твой тег <q-table>.
+Особенно интересует, есть ли там строка
+HTML
+@row-contextmenu="onRowContextMenu"
+и полностью ли выглядит тег примерно так:
+HTML
+<q-table
+    ...
+    @row-contextmenu="onRowContextMenu"
+>
+Второе
+Покажи метод
+onRowContextMenu(...)
+который сейчас находится в methods.
+Скорее всего проблема вот в чем
+В разных версиях Quasar событие row-contextmenu передает параметры в разном порядке.
+Я написал вариант
+onRowContextMenu(evt, row)
+но у тебя вполне может приходить наоборот:
+onRowContextMenu(row, evt)
+или вообще объект другого вида.
+Самый быстрый способ проверить — временно заменить метод на
+onRowContextMenu() {
+    console.log(arguments);
+}
+После ПКМ посмотри в консоль, что именно выводится.
+Например, если увидишь
+Arguments(2)
+0: MouseEvent
+1: {IdMessageInMX: 300000069, ...}
+то всё правильно.
+Если увидишь
+Arguments(2)
+0: {IdMessageInMX: 300000069, ...}
+1: MouseEvent
+значит параметры нужно просто поменять местами:
+onRowContextMenu(row, evt) {
 
-    <q-card style="min-width:1000px; max-width:95vw;">
+    evt.preventDefault();
 
-        <q-card-section class="row items-center">
+    this.selectedRow = row;
 
-            <div class="text-h6">
-                Message text
-            </div>
+    this.$refs.rowMenu.show(evt);
 
-            <q-space />
-
-            <q-btn
-                icon="close"
-                flat
-                round
-                dense
-                v-close-popup
-            />
-
-        </q-card-section>
-
-        <q-separator />
-
-        <q-card-section style="max-height:70vh; overflow:auto;">
-
-            <pre>{{ messageText }}</pre>
-
-        </q-card-section>
-
-    </q-card>
-
-</q-dialog>
+}
