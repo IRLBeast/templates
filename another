@@ -334,3 +334,24 @@ def get_outgoing_message(request, message_id):
     return JsonResponse({
         "message": message
     })
+
+
+
+
+showMessage() {
+
+    let url;
+
+    if (this.tableMode === "incoming") {
+        url = `/api/message/${this.selectedMessageId}`;
+    } else {
+        url = `/api/outgoing_message/${this.selectedOutMessageId}`;
+    }
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            this.messageText = data.message;
+            this.messageDialog = true;
+        });
+}
