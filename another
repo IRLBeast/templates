@@ -198,3 +198,38 @@ loadIncoming() {
     this.loadData();
 
 },
+
+если есть что-то вроде:
+path("api/messages", get_messages, name="get_messages"),
+path("api/message/<int:message_id>", get_message, name="get_message"),
+то нужно добавить еще два маршрута:
+path(
+    "api/outgoing/<int:message_id>",
+    get_outgoing_messages,
+    name="get_outgoing_messages"
+),
+
+path(
+    "api/outgoing_message/<int:message_id>",
+    get_outgoing_message,
+    name="get_outgoing_message"
+),
+где:
+get_outgoing_messages — возвращает список исходящих сообщений по запросу:
+SELECT
+    "IdMessageOutMX",
+    "TmOut",
+    "NrBankSender",
+    "CdAuthSender",
+    "NrBankReceiver",
+    "CdAuthReceiver",
+    "BizSvc",
+    "BizMsgIdr",
+    "MsgDefIdr",
+    "IdMessageInMX"
+FROM RTGX."MessageOutMX"
+WHERE "IdMessageInMX" = ?
+get_outgoing_message — возвращает XML по запросу:
+SELECT "MsgText"
+FROM RTGX."MessageOutMX"
+WHERE "IdMessageInMX" = ?
