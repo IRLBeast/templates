@@ -233,3 +233,104 @@ get_outgoing_message — возвращает XML по запросу:
 SELECT "MsgText"
 FROM RTGX."MessageOutMX"
 WHERE "IdMessageInMX" = ?
+
+
+from django.http import JsonResponse
+import ibm_db
+
+
+def get_outgoing_messages(request, message_id):
+
+    conn_str = (
+        "DATABASE=DB2B;"
+        "HOSTNAME=10.2.11.211;"
+        "PORT=7025;"
+        "PROTOCOL=TCPIP;"
+        "UID=user1;"
+        "PWD=pass11;"
+    )
+
+    conn = ibm_db.connect(conn_str, "", "")
+
+    sql = """
+    SELECT
+        "IdMessageOutMX",
+        "TmOut",
+        "NrBankSender",
+        "CdAuthSender",
+        "NrBankReceiver",
+        "CdAuthReceiver",
+        "BizSvc",
+        "BizMsgIdr",
+        "MsgDefIdr",
+        "IdMessageInMX"
+    FROM RTGX."MessageOutMX"
+    WHERE "IdMessageInMX" = ?
+    ORDER BY "TmOut" DESC
+    """
+
+    stmt = ibm_db.prepare(conn, sql)
+    ibm_db.bind_param(stmt, 1, message_id)
+    ibm_db.execute(stmt)
+
+    num_cols = ibm_db.num_fields(stmt)
+    headers = [ibm_db.field_name(stmt, i) for i in range(num_cols)]
+
+    rows = []
+
+    while ibm_db.fetch_row(stmt):
+        row = {}
+
+        for i in range(num_cols):
+            value = ibm_db.result(stmt, i)
+
+            # datetime переводим в строку
+            if hasattr(value, "isoformat"):
+                value = value.strftime("%Y-%m-%d %H:%M:%S")
+
+            row[headers[i]] = value
+
+        rows.append(row)
+
+    ibm_db.close(conn)
+
+    return JsonResponse(rows, safe=False)
+
+
+from django.http import JsonResponse
+import ibm_db
+
+
+def get_outgoing_message(request, message_id):
+
+    conn_str = (
+        "DATABASE=DB2B;"
+        "HOSTNAME=10.2.11.211;"
+        "PORT=7025;"
+        "PROTOCOL=TCPIP;"
+        "UID=user1;"
+        "PWD=pass11;"
+    )
+
+    conn = ibm_db.connect(conn_str, "", "")
+
+    sql = """
+    SELECT "MsgText"
+    FROM RTGX."MessageOutMX"
+    WHERE "IdMessageInMX" = ?
+    """
+
+    stmt = ibm_db.prepare(conn, sql)
+    ibm_db.bind_param(stmt, 1, message_id)
+    ibm_db.execute(stmt)
+
+    message = ""
+
+    if ibm_db.fetch_row(stmt):
+        message = ibm_db.result(stmt, 0)
+
+    ibm_db.close(conn)
+
+    return JsonResponse({
+        "message": message
+    })
