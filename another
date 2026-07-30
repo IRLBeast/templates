@@ -355,3 +355,25 @@ showMessage() {
             this.messageDialog = true;
         });
 }
+
+
+<div class="q-mt-md row q-gutter-sm">
+
+    <q-btn
+        v-if="tableMode === 'incoming'"
+        color="primary"
+        icon="refresh"
+        label="Обновить"
+        :loading="loading"
+        @click="loadData"
+    />
+
+    <q-btn
+        v-if="tableMode === 'outgoing'"
+        color="secondary"
+        icon="arrow_back"
+        label="Вернуться к входящим сообщениям"
+        @click="loadIncoming"
+    />
+
+</div>
