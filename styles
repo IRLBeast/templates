@@ -1,20 +1,65 @@
-<div class="q-mt-md row q-gutter-sm">
+Шаг 1. Оставляем текущий веб-запуск
+Он уже есть:
+POST /run-tests/
+Пользователь выбрал чекбоксы → нажал кнопку → тесты запустились.
+Ничего здесь менять не нужно.
+Шаг 2. Добавляем API
+Например:
+POST /api/v1/run
+В теле запроса:
+{
+    "tests": [
+        "kr_legal",
+        "kr_reports"
+    ]
+}
+Или, если используешь nodeid:
+{
+    "tests": [
+        "tests/credit_register/test_legal_users.py::test_login"
+    ]
+}
+Шаг 3. В urls.py
+Добавляешь новый путь:
+urlpatterns = [
+    path("", views.index),
+    path("run-tests/", views.run_tests),
 
-    <q-btn
-        v-if="tableMode === 'incoming'"
-        color="primary"
-        icon="refresh"
-        label="Обновить"
-        :loading="loading"
-        @click="loadData"
-    />
+    path("api/v1/run/", views.api_run_tests),
+]
+Шаг 4. В views.py
+Текущий run_tests() практически не трогаем.
+Добавляем новую функцию:
+from django.views.decorators.csrf import csrf_exempt
+import json
 
-    <q-btn
-        v-if="tableMode === 'outgoing'"
-        color="secondary"
-        icon="arrow_back"
-        label="Вернуться к входящим сообщениям"
-        @click="loadIncoming"
-    />
+@csrf_exempt
+def api_run_tests(request):
 
-</div>
+    if request.method != "POST":
+        return JsonResponse(
+            {"error": "POST required"},
+            status=405
+        )
+
+    body = json.loads(request.body)
+
+    tests = body.get("tests", [])
+
+    result = run_pytest(tests)
+
+    return JsonResponse(result)
+
+Шаг 5. Запуск извне
+Теперь любой клиент сможет выполнить
+curl -X POST http://server/api/v1/run/ \
+-H "Content-Type: application/json" \
+-d '{
+    "tests":["kr_legal"]
+}'
+И получит
+{
+    "run_id":"...",
+    "report":...,
+    "text_report":"..."
+}
