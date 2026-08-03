@@ -63,3 +63,7 @@ curl -X POST http://server/api/v1/run/ \
     "report":...,
     "text_report":"..."
 }
+
+
+$body = @{tests = @("kr_legal")} | ConvertTo-Json
+Invoke-RestMethod -Uri "http://server/api/v1/run/" -Method Post -ContentType "application/json" -Body $body
