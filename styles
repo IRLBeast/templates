@@ -1,69 +1,151 @@
-Шаг 1. Оставляем текущий веб-запуск
-Он уже есть:
-POST /run-tests/
-Пользователь выбрал чекбоксы → нажал кнопку → тесты запустились.
-Ничего здесь менять не нужно.
-Шаг 2. Добавляем API
-Например:
-POST /api/v1/run
-В теле запроса:
-{
-    "tests": [
-        "kr_legal",
-        "kr_reports"
-    ]
-}
-Или, если используешь nodeid:
-{
-    "tests": [
-        "tests/credit_register/test_legal_users.py::test_login"
-    ]
-}
-Шаг 3. В urls.py
-Добавляешь новый путь:
-urlpatterns = [
-    path("", views.index),
-    path("run-tests/", views.run_tests),
+Теперь tableMode может принимать три значения:
+"incoming"
+"outgoing"
+"admin"
+2. Добавь path в urls.py
+Если у тебя уже есть функции во views.py, то добавь маршруты:
+path(
+    "api/messages_admin",
+    get_messages_admin,
+    name="get_messages_admin"
+),
 
-    path("api/v1/run/", views.api_run_tests),
-]
-Шаг 4. В views.py
-Текущий run_tests() практически не трогаем.
-Добавляем новую функцию:
-from django.views.decorators.csrf import csrf_exempt
-import json
+path(
+    "api/message_admin/<int:message_id>",
+    get_message_admin,
+    name="get_message_admin"
+),
+3. В q-table
+Если сейчас у тебя:
+HTML
+:columns="tableMode === 'incoming'
+            ? incomingColumns
+            : outgoingColumns"
+то замени на:
+HTML
+:columns="
+    tableMode === 'incoming'
+        ? incomingColumns
+        : tableMode === 'outgoing'
+            ? outgoingColumns
+            : adminColumns
+"
+4. Добавь функцию loadAdmin()
+Например так:
+loadAdmin() {
 
-@csrf_exempt
-def api_run_tests(request):
+    this.loading = true;
 
-    if request.method != "POST":
-        return JsonResponse(
-            {"error": "POST required"},
-            status=405
-        )
+    fetch("/api/messages_admin")
+        .then(r => r.json())
+        .then(data => {
 
-    body = json.loads(request.body)
+            this.data = data;
 
-    tests = body.get("tests", [])
+            this.tableMode = "admin";
 
-    result = run_pytest(tests)
+            this.$nextTick(() => {
+                this.attachContextMenu();
+            });
 
-    return JsonResponse(result)
+        })
+        .finally(() => {
+            this.loading = false;
+        });
 
-Шаг 5. Запуск извне
-Теперь любой клиент сможет выполнить
-curl -X POST http://server/api/v1/run/ \
--H "Content-Type: application/json" \
--d '{
-    "tests":["kr_legal"]
-}'
-И получит
-{
-    "run_id":"...",
-    "report":...,
-    "text_report":"..."
-}
+},
+5. Измени showMessage()
+Сейчас там две ветки.
+Добавь третью:
+showMessage() {
 
+    let url;
 
-$body = @{tests = @("kr_legal")} | ConvertTo-Json
-Invoke-RestMethod -Uri "http://server/api/v1/run/" -Method Post -ContentType "application/json" -Body $body
+    if (this.tableMode === "incoming") {
+
+        url = `/api/message/${this.selectedMessageId}`;
+
+    } else if (this.tableMode === "outgoing") {
+
+        url = `/api/outgoing_message/${this.selectedOutMessageId}`;
+
+    } else {
+
+        url = `/api/message_admin/${this.selectedMessageId}`;
+
+    }
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+
+            this.messageText = data.message;
+            this.messageDialog = true;
+
+        });
+
+},
+6. Контекстное меню
+Раз для администратора нужна только одна кнопка, сделай так:
+HTML
+<q-item
+    clickable
+    v-close-popup
+    @click="showMessage">
+    <q-item-section>
+        Получить текст сообщения
+    </q-item-section>
+</q-item>
+
+<q-item
+    v-if="tableMode === 'incoming'"
+    clickable
+    v-close-popup
+    @click="showOutgoing">
+    <q-item-section>
+        Исходящие сообщения
+    </q-item-section>
+</q-item>
+Тогда:
+incoming → две кнопки;
+outgoing → одна кнопка;
+admin → одна кнопка.
+7. Кнопки под таблицей
+Сейчас, скорее всего, у тебя:
+HTML
+<q-btn
+    v-if="tableMode === 'incoming'"
+    ...
+>
+</q-btn>
+
+<q-btn
+    v-if="tableMode === 'outgoing'"
+    ...
+>
+</q-btn>
+Я бы сделал так:
+<q-btn
+    v-if="tableMode === 'incoming'"
+    color="primary"
+    icon="refresh"
+    label="Обновить"
+    :loading="loading"
+    @click="loadData">
+</q-btn>
+
+<q-btn
+    v-if="tableMode === 'incoming'"
+    color="primary"
+    icon="admin_panel_settings"
+    label="Сообщения администратора"
+    @click="loadAdmin">
+</q-btn>
+
+<q-btn
+    v-if="tableMode === 'outgoing' || tableMode === 'admin'"
+    color="secondary"
+    icon="arrow_back"
+    label="Вернуться к входящим сообщениям"
+    @click="loadIncoming">
+</q-btn>
