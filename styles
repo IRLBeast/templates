@@ -1,151 +1,20 @@
-Теперь tableMode может принимать три значения:
-"incoming"
-"outgoing"
-"admin"
-2. Добавь path в urls.py
-Если у тебя уже есть функции во views.py, то добавь маршруты:
-path(
-    "api/messages_admin",
-    get_messages_admin,
-    name="get_messages_admin"
-),
-
-path(
-    "api/message_admin/<int:message_id>",
-    get_message_admin,
-    name="get_message_admin"
-),
-3. В q-table
-Если сейчас у тебя:
-HTML
-:columns="tableMode === 'incoming'
-            ? incomingColumns
-            : outgoingColumns"
-то замени на:
-HTML
-:columns="
-    tableMode === 'incoming'
-        ? incomingColumns
-        : tableMode === 'outgoing'
-            ? outgoingColumns
-            : adminColumns
-"
-4. Добавь функцию loadAdmin()
-Например так:
-loadAdmin() {
-
-    this.loading = true;
-
-    fetch("/api/messages_admin")
-        .then(r => r.json())
-        .then(data => {
-
-            this.data = data;
-
-            this.tableMode = "admin";
-
-            this.$nextTick(() => {
-                this.attachContextMenu();
-            });
-
-        })
-        .finally(() => {
-            this.loading = false;
-        });
-
-},
-5. Измени showMessage()
-Сейчас там две ветки.
-Добавь третью:
-showMessage() {
-
-    let url;
-
-    if (this.tableMode === "incoming") {
-
-        url = `/api/message/${this.selectedMessageId}`;
-
-    } else if (this.tableMode === "outgoing") {
-
-        url = `/api/outgoing_message/${this.selectedOutMessageId}`;
-
-    } else {
-
-        url = `/api/message_admin/${this.selectedMessageId}`;
-
+tbody.addEventListener("contextmenu", (e) => {
+    const tr = e.target.closest("tr");
+    if (!tr) {
+        return;
     }
 
-    fetch(url)
-        .then(r => r.json())
-        .then(data => {
+    e.preventDefault();
 
-            this.messageText = data.message;
-            this.messageDialog = true;
+    if (this.tableMode === "incoming") {
+        this.selectedMessageId = tr.cells[0].innerText.trim();
 
-        });
+    } else if (this.tableMode === "outgoing") {
+        this.selectedOutMessageId = tr.cells[0].innerText.trim();
 
-},
-6. Контекстное меню
-Раз для администратора нужна только одна кнопка, сделай так:
-HTML
-<q-item
-    clickable
-    v-close-popup
-    @click="showMessage">
-    <q-item-section>
-        Получить текст сообщения
-    </q-item-section>
-</q-item>
+    } else if (this.tableMode === "admin") {
+        this.selectedMessageId = tr.cells[0].innerText.trim();
+    }
 
-<q-item
-    v-if="tableMode === 'incoming'"
-    clickable
-    v-close-popup
-    @click="showOutgoing">
-    <q-item-section>
-        Исходящие сообщения
-    </q-item-section>
-</q-item>
-Тогда:
-incoming → две кнопки;
-outgoing → одна кнопка;
-admin → одна кнопка.
-7. Кнопки под таблицей
-Сейчас, скорее всего, у тебя:
-HTML
-<q-btn
-    v-if="tableMode === 'incoming'"
-    ...
->
-</q-btn>
-
-<q-btn
-    v-if="tableMode === 'outgoing'"
-    ...
->
-</q-btn>
-Я бы сделал так:
-<q-btn
-    v-if="tableMode === 'incoming'"
-    color="primary"
-    icon="refresh"
-    label="Обновить"
-    :loading="loading"
-    @click="loadData">
-</q-btn>
-
-<q-btn
-    v-if="tableMode === 'incoming'"
-    color="primary"
-    icon="admin_panel_settings"
-    label="Сообщения администратора"
-    @click="loadAdmin">
-</q-btn>
-
-<q-btn
-    v-if="tableMode === 'outgoing' || tableMode === 'admin'"
-    color="secondary"
-    icon="arrow_back"
-    label="Вернуться к входящим сообщениям"
-    @click="loadIncoming">
-</q-btn>
+    this.$refs.rowMenu.show(e);
+});
