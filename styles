@@ -1,20 +1,5 @@
-tbody.addEventListener("contextmenu", (e) => {
-    const tr = e.target.closest("tr");
-    if (!tr) {
-        return;
-    }
-
-    e.preventDefault();
-
-    if (this.tableMode === "incoming") {
-        this.selectedMessageId = tr.cells[0].innerText.trim();
-
-    } else if (this.tableMode === "outgoing") {
-        this.selectedOutMessageId = tr.cells[0].innerText.trim();
-
-    } else if (this.tableMode === "admin") {
-        this.selectedMessageId = tr.cells[0].innerText.trim();
-    }
-
-    this.$refs.rowMenu.show(e);
-});
+curl -X POST http://server/api/v1/run/ \
+-H "Content-Type: application/json" \
+-d '{
+    "tests":["test_name"]
+}'
