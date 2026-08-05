@@ -1,51 +1,56 @@
-import ibm_db
+pip install pymqi
 
-def get_connection():
-    conn_str = (
-        "DATABASE=DB2B;"
-        "HOSTNAME=10.2.11.211;"
-        "PORT=7025;"
-        "PROTOCOL=TCPIP;"
-        "UID=user1;"
-        "PWD=pass11;"
-    )
+import pymqi
 
-    return ibm_db.connect(conn_str, "", "")
+QMGR = "QM1"
+CHANNEL = "DEV.APP.SVRCONN"
+HOST = "192.168.1.100"
+PORT = "1414"
+QUEUE = "INPUT.QUEUE"
 
+conn_info = f"{HOST}({PORT})"
 
-Вместо
-conn_str = (
-    ...
-)
+cd = pymqi.CD()
+cd.ChannelName = CHANNEL
+cd.ConnectionName = conn_info
+cd.ChannelType = pymqi.CMQC.MQCHT_CLNTCONN
+cd.TransportType = pymqi.CMQC.MQXPT_TCP
 
-conn = ibm_db.connect(conn_str, "", "")
-останется всего одна строка:
-conn = get_connection()
-Например,
-def get_message(request, message_id):
+qmgr = pymqi.QueueManager(None)
+qmgr.connect_with_options(QMGR, cd=cd)
 
-    conn = get_connection()
+queue = pymqi.Queue(qmgr, QUEUE)
 
-    sql = """
-        SELECT "MsgText"
-        FROM ...
-    """
+with open("message.xml", "r", encoding="utf-8") as f:
+    xml = f.read()
 
-    ...
+queue.put(xml)
+
+print("XML успешно отправлен")
+
+queue.close()
+qmgr.disconnect()
 
 
 
-import os
-import ibm_db
 
-def get_connection():
-    conn_str = (
-        f"DATABASE={os.getenv('DB_NAME')};"
-        f"HOSTNAME={os.getenv('DB_HOST')};"
-        f"PORT={os.getenv('DB_PORT')};"
-        "PROTOCOL=TCPIP;"
-        f"UID={os.getenv('DB_USER')};"
-        f"PWD={os.getenv('DB_PASSWORD')};"
-    )
+Если получатель ожидает кодировку UTF-8, лучше явно указать параметры сообщения:
+pmo = pymqi.PMO()
+md = pymqi.MD()
 
-    return ibm_db.connect(conn_str, "", "")
+md.Format = pymqi.CMQC.MQFMT_STRING
+md.CodedCharSetId = 1208  # UTF-8
+md.Encoding = pymqi.CMQC.MQENC_NATIVE
+
+queue.put(xml, md, pmo)
+
+
+
+нужно знать:
+Queue Manager (например QM1);
+Channel (например DEV.APP.SVRCONN);
+Host;
+Port (обычно 1414);
+Имя очереди, в которую нужно отправлять XML;
+нужен ли логин/пароль;
+используется ли TLS.
