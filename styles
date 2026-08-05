@@ -1,5 +1,51 @@
-curl -X POST http://server/api/v1/run/ \
--H "Content-Type: application/json" \
--d '{
-    "tests":["test_name"]
-}'
+import ibm_db
+
+def get_connection():
+    conn_str = (
+        "DATABASE=DB2B;"
+        "HOSTNAME=10.2.11.211;"
+        "PORT=7025;"
+        "PROTOCOL=TCPIP;"
+        "UID=user1;"
+        "PWD=pass11;"
+    )
+
+    return ibm_db.connect(conn_str, "", "")
+
+
+Вместо
+conn_str = (
+    ...
+)
+
+conn = ibm_db.connect(conn_str, "", "")
+останется всего одна строка:
+conn = get_connection()
+Например,
+def get_message(request, message_id):
+
+    conn = get_connection()
+
+    sql = """
+        SELECT "MsgText"
+        FROM ...
+    """
+
+    ...
+
+
+
+import os
+import ibm_db
+
+def get_connection():
+    conn_str = (
+        f"DATABASE={os.getenv('DB_NAME')};"
+        f"HOSTNAME={os.getenv('DB_HOST')};"
+        f"PORT={os.getenv('DB_PORT')};"
+        "PROTOCOL=TCPIP;"
+        f"UID={os.getenv('DB_USER')};"
+        f"PWD={os.getenv('DB_PASSWORD')};"
+    )
+
+    return ibm_db.connect(conn_str, "", "")
