@@ -1,56 +1,23 @@
-pip install pymqi
+Windows часто автоматически получает DNS-суффикс (например, .local) по DHCP, добавляя его к коротким именам. В Linux этого может не быть.
 
-import pymqi
+· Проверьте: Откройте терминал и выполните resolvectl status. В секции вашего сетевого интерфейса найдите строки "DNS Domain" или "Search Domains".
+· Временное решение: Выполните resolvectl query q-web и посмотрите, что вернет команда. Или попробуйте перейти по адресу q-web.<суффикс>.
+· Исправление: Выполните sudo resolvectl domain <интерфейс> "<ваш_суффикс>" (например, sudo resolvectl domain eth0 "local").
 
-QMGR = "QM1"
-CHANNEL = "DEV.APP.SVRCONN"
-HOST = "192.168.1.100"
-PORT = "1414"
-QUEUE = "INPUT.QUEUE"
+2. Неправильный или "заблокированный" /etc/resolv.conf
 
-conn_info = f"{HOST}({PORT})"
+Этот файл указывает, какие DNS-серверы использовать. На Debian его часто перезаписывают сетевые менеджеры.
 
-cd = pymqi.CD()
-cd.ChannelName = CHANNEL
-cd.ConnectionName = conn_info
-cd.ChannelType = pymqi.CMQC.MQCHT_CLNTCONN
-cd.TransportType = pymqi.CMQC.MQXPT_TCP
+· Проверьте: Откройте файл cat /etc/resolv.conf. Если он указывает на 127.0.0.1 (себя) или на странный адрес вроде 127.0.0.153 — это может быть локальный кеширующий DNS, который не знает о q-web.
+· Что делать: Если в файле нет адреса вашего основного DNS-сервера, добавьте его строкой nameserver <IP_вашего_DNS>.
 
-qmgr = pymqi.QueueManager(None)
-qmgr.connect_with_options(QMGR, cd=cd)
+3. DNS-сервер не имеет записи для этого имени
 
-queue = pymqi.Queue(qmgr, QUEUE)
+Возможно, q-web существует только в файле hosts на Windows, а ваш DNS-сервер его не знает.
 
-with open("message.xml", "r", encoding="utf-8") as f:
-    xml = f.read()
+· Проверьте на Linux: Откройте /etc/hosts (sudo nano /etc/hosts) и посмотрите, есть ли там строка с q-web.
+· Исправление: Если на Windows есть запись в C:\Windows\System32\drivers\etc\hosts, скопируйте её в /etc/hosts на Linux.
 
-queue.put(xml)
+Дополнительный совет
 
-print("XML успешно отправлен")
-
-queue.close()
-qmgr.disconnect()
-
-
-
-
-Если получатель ожидает кодировку UTF-8, лучше явно указать параметры сообщения:
-pmo = pymqi.PMO()
-md = pymqi.MD()
-
-md.Format = pymqi.CMQC.MQFMT_STRING
-md.CodedCharSetId = 1208  # UTF-8
-md.Encoding = pymqi.CMQC.MQENC_NATIVE
-
-queue.put(xml, md, pmo)
-
-
-
-нужно знать:
-Queue Manager (например QM1);
-Channel (например DEV.APP.SVRCONN);
-Host;
-Port (обычно 1414);
-Имя очереди, в которую нужно отправлять XML;
-нужен ли логин/пароль;
-используется ли TLS.
+Попробуйте команду nslookup q-web. В выводе будет показано, какой DNS-сервер используется и что он отвечает. Также не лишним будет проверить ваш /etc/nsswitch.conf — в строке hosts: должно быть files dns (чтобы файл /etc/hosts проверялся до DNS).
