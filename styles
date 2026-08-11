@@ -1,44 +1,24 @@
-update monitoring.taskdef
-set CREATE_DATE = CREATE_DATE - INTERVAL '1' MONTH,
- BEGIN_DATE = BEGIN_DATE - INTERVAL '1' MONTH,
- BEGIN_TIME = BEGIN_TIME - INTERVAL '1' MONTH
-where taskdef_id = 7001;
-commit;
-select * from monitoring.taskdef
-where taskdef_id = 7001
-
-update monitoring.taskdef_borr
-set CREATE_DATE = CREATE_DATE - INTERVAL '1' MONTH,
- BEGIN_DATE = BEGIN_DATE - INTERVAL '1' MONTH,
- BEGIN_TIME = BEGIN_TIME - INTERVAL '1' MONTH
-where taskdef_id = 7001;
-commit;
-select * from monitoring.taskdef_borr
-where taskdef_id = 7001
-
-update monitoring.taskdef_desc
-set CREATE_DATE = CREATE_DATE - INTERVAL '1' MONTH,
- BEGIN_DATE = BEGIN_DATE - INTERVAL '1' MONTH,
- BEGIN_TIME = BEGIN_TIME - INTERVAL '1' MONTH
-where taskdef_id = 7001;
-commit;
-select * from monitoring.taskdef_desc
-where taskdef_id = 7001
-
-update monitoring.taskdef_trigger
-set CREATE_DATE = CREATE_DATE - INTERVAL '1' MONTH,
- BEGIN_DATE = BEGIN_DATE - INTERVAL '1' MONTH,
- BEGIN_TIME = BEGIN_TIME - INTERVAL '1' MONTH
-where taskdef_id = 7001;
-commit;
-select * from monitoring.taskdef_trigger
-where taskdef_id = 7001
-
-update monitoring.taskdef_reglm_period
-set CREATE_DATE = CREATE_DATE - INTERVAL '1' MONTH,
- BEGIN_DATE = BEGIN_DATE - INTERVAL '1' MONTH,
- BEGIN_TIME = BEGIN_TIME - INTERVAL '1' MONTH
-where taskdef_id = 7001;
-commit;
-select * from monitoring.taskdef_reglm_period
-where taskdef_id = 7001
+DECLARE
+    v_taskdef_id NUMBER := 7001;  -- Меняете здесь
+    TYPE table_list IS TABLE OF VARCHAR2(30);
+    v_tables table_list := table_list('taskdef', 'taskdef_borr', 'taskdef_desc', 
+                                       'taskdef_trigger', 'taskdef_reglm_period');
+    v_sql VARCHAR2(1000);
+BEGIN
+    FOR i IN 1..v_tables.COUNT LOOP
+        v_sql := 'UPDATE monitoring.' || v_tables(i) || 
+                 ' SET CREATE_DATE = CREATE_DATE - INTERVAL ''1'' MONTH,
+                     BEGIN_DATE = BEGIN_DATE - INTERVAL ''1'' MONTH,
+                     BEGIN_TIME = BEGIN_TIME - INTERVAL ''1'' MONTH
+                 WHERE taskdef_id = :id';
+        EXECUTE IMMEDIATE v_sql USING v_taskdef_id;
+    END LOOP;
+    COMMIT;
+    
+    -- Вывод результатов
+    FOR i IN 1..v_tables.COUNT LOOP
+        v_sql := 'SELECT * FROM monitoring.' || v_tables(i) || ' WHERE taskdef_id = :id';
+        EXECUTE IMMEDIATE v_sql USING v_taskdef_id;
+    END LOOP;
+END;
+/
