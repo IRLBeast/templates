@@ -1,23 +1,44 @@
-Windows часто автоматически получает DNS-суффикс (например, .local) по DHCP, добавляя его к коротким именам. В Linux этого может не быть.
+update monitoring.taskdef
+set CREATE_DATE = CREATE_DATE - INTERVAL '1' MONTH,
+ BEGIN_DATE = BEGIN_DATE - INTERVAL '1' MONTH,
+ BEGIN_TIME = BEGIN_TIME - INTERVAL '1' MONTH
+where taskdef_id = 7001;
+commit;
+select * from monitoring.taskdef
+where taskdef_id = 7001
 
-· Проверьте: Откройте терминал и выполните resolvectl status. В секции вашего сетевого интерфейса найдите строки "DNS Domain" или "Search Domains".
-· Временное решение: Выполните resolvectl query q-web и посмотрите, что вернет команда. Или попробуйте перейти по адресу q-web.<суффикс>.
-· Исправление: Выполните sudo resolvectl domain <интерфейс> "<ваш_суффикс>" (например, sudo resolvectl domain eth0 "local").
+update monitoring.taskdef_borr
+set CREATE_DATE = CREATE_DATE - INTERVAL '1' MONTH,
+ BEGIN_DATE = BEGIN_DATE - INTERVAL '1' MONTH,
+ BEGIN_TIME = BEGIN_TIME - INTERVAL '1' MONTH
+where taskdef_id = 7001;
+commit;
+select * from monitoring.taskdef_borr
+where taskdef_id = 7001
 
-2. Неправильный или "заблокированный" /etc/resolv.conf
+update monitoring.taskdef_desc
+set CREATE_DATE = CREATE_DATE - INTERVAL '1' MONTH,
+ BEGIN_DATE = BEGIN_DATE - INTERVAL '1' MONTH,
+ BEGIN_TIME = BEGIN_TIME - INTERVAL '1' MONTH
+where taskdef_id = 7001;
+commit;
+select * from monitoring.taskdef_desc
+where taskdef_id = 7001
 
-Этот файл указывает, какие DNS-серверы использовать. На Debian его часто перезаписывают сетевые менеджеры.
+update monitoring.taskdef_trigger
+set CREATE_DATE = CREATE_DATE - INTERVAL '1' MONTH,
+ BEGIN_DATE = BEGIN_DATE - INTERVAL '1' MONTH,
+ BEGIN_TIME = BEGIN_TIME - INTERVAL '1' MONTH
+where taskdef_id = 7001;
+commit;
+select * from monitoring.taskdef_trigger
+where taskdef_id = 7001
 
-· Проверьте: Откройте файл cat /etc/resolv.conf. Если он указывает на 127.0.0.1 (себя) или на странный адрес вроде 127.0.0.153 — это может быть локальный кеширующий DNS, который не знает о q-web.
-· Что делать: Если в файле нет адреса вашего основного DNS-сервера, добавьте его строкой nameserver <IP_вашего_DNS>.
-
-3. DNS-сервер не имеет записи для этого имени
-
-Возможно, q-web существует только в файле hosts на Windows, а ваш DNS-сервер его не знает.
-
-· Проверьте на Linux: Откройте /etc/hosts (sudo nano /etc/hosts) и посмотрите, есть ли там строка с q-web.
-· Исправление: Если на Windows есть запись в C:\Windows\System32\drivers\etc\hosts, скопируйте её в /etc/hosts на Linux.
-
-Дополнительный совет
-
-Попробуйте команду nslookup q-web. В выводе будет показано, какой DNS-сервер используется и что он отвечает. Также не лишним будет проверить ваш /etc/nsswitch.conf — в строке hosts: должно быть files dns (чтобы файл /etc/hosts проверялся до DNS).
+update monitoring.taskdef_reglm_period
+set CREATE_DATE = CREATE_DATE - INTERVAL '1' MONTH,
+ BEGIN_DATE = BEGIN_DATE - INTERVAL '1' MONTH,
+ BEGIN_TIME = BEGIN_TIME - INTERVAL '1' MONTH
+where taskdef_id = 7001;
+commit;
+select * from monitoring.taskdef_reglm_period
+where taskdef_id = 7001
