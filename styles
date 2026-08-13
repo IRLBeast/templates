@@ -1,16 +1,146 @@
-На сервере выполни:
-dspmq
-затем:
-runmqsc ИМЯ_ТВОЕГО_QM
-и внутри:
+PS C:\Windows\system32> dspmq
+QMNAME(AISCOSR2_MQM)                                      STATUS(Выполняется)
+PS C:\Windows\system32> dspmqver
+Name:        IBM MQ
+Version:     9.2.3.0
+Level:       p923-L210708
+BuildType:   IKAP - (Production)
+Platform:    IBM MQ for Windows (x64 platform)
+Mode:        64-bit
+O/S:         Windows Server 2019 Server Standard Edition, Build 17763
+InstName:    MQSeriesService
+InstDesc:
+Primary:     Yes
+InstPath:    C:\Program Files\IBM\MQ
+DataPath:    C:\ProgramData\IBM\MQ
+MaxCmdLevel: 923
+LicenseType: Production
+PS C:\Windows\system32> runmqsc AISCOSR2_MQM
+5724-H72 (C) Copyright IBM Corp. 1994, 2021.
+Выполняется запуск MQSC для администратора очередей AISCOSR2_MQM.
+
+
 DISPLAY QMGR
-DISPLAY LISTENER(*)
-DISPLAY CHANNEL(*)
+     1 : DISPLAY QMGR
+AMQ8408I: Сведения о команде Показать администратор очередей.
+   QMNAME(AISCOSR2_MQM)                    ACCTCONO(DISABLED)
+   ACCTINT(1800)                           ACCTMQI(OFF)
+   ACCTQ(OFF)                              ACTIVREC(MSG)
+   ACTVCONO(DISABLED)                      ACTVTRC(OFF)
+   ADVCAP(DISABLED)                        ALTDATE(2026-07-14)
+   ALTTIME(14.44.18)                       AMQPCAP(NO)
+   AUTHOREV(DISABLED)                      CCSID(866)
+   CERTLABL(ibmwebspheremqaiscosr2_mqm)    CERTVPOL(ANY)
+   CHAD(DISABLED)                          CHADEV(DISABLED)
+   CHADEXIT( )                             CHLEV(DISABLED)
+   CHLAUTH(DISABLED)                       CLWLDATA( )
+   CLWLEXIT( )                             CLWLLEN(100)
+   CLWLMRUC(999999999)                     CLWLUSEQ(LOCAL)
+   CMDEV(DISABLED)                         CMDLEVEL(923)
+   COMMANDQ(SYSTEM.ADMIN.COMMAND.QUEUE)    CONFIGEV(DISABLED)
+   CONNAUTH( )                             CRDATE(2024-05-31)
+   CRTIME(14.18.37)                        CUSTOM( )
+   DEADQ(DEAD.QUEUE)                       DEFCLXQ(SCTQ)
+   DEFXMITQ( )                             DESCR( )
+   DISTL(YES)                              IMGINTVL(60)
+   IMGLOGLN(OFF)                           IMGRCOVO(YES)
+   IMGRCOVQ(YES)                           IMGSCHED(MANUAL)
+   INHIBTEV(DISABLED)                      IPADDRV(IPV4)
+   LOCALEV(DISABLED)                       LOGGEREV(DISABLED)
+   MARKINT(5000)                           MAXHANDS(1024)
+   MAXMSGL(104857600)                      MAXPROPL(NOLIMIT)
+   MAXPRTY(9)                              MAXUMSGS(10000)
+   MONACLS(QMGR)                           MONCHL(OFF)
+   MONQ(OFF)                               PARENT( )
+   PERFMEV(DISABLED)                       PLATFORM(WINDOWSNT)
+   PSMODE(ENABLED)                         PSCLUS(ENABLED)
+   PSNPMSG(DISCARD)                        PSNPRES(NORMAL)
+   PSRTYCNT(5)                             PSSYNCPT(IFPER)
+   QMID(AISCOSR2_MQM_2024-05-31_14.18.37)
+   REMOTEEV(DISABLED)                      REPOS( )
+   REPOSNL( )                              REVDNS(DISABLED)
+   ROUTEREC(MSG)                           SCHINIT(QMGR)
+   SCMDSERV(QMGR)                          SPLCAP(DISABLED)
+   SSLCRLNL( )                             SSLCRYP( )
+   SSLEV(DISABLED)                         SSLFIPS(NO)
+   SSLKEYR(C:\ProgramData\IBM\MQ\qmgrs\AISCOSR2_MQM\ssl\key)
+   SSLRKEYC(0)                             STATACLS(QMGR)
+   STATCHL(OFF)                            STATINT(1800)
+   STATMQI(OFF)                            STATQ(OFF)
+   STRSTPEV(ENABLED)                       SUITEB(NONE)
+   SYNCPT                                  TREELIFE(1800)
+   TRIGINT(999999999)                      VERSION(09020300)
+   XRCAP(NO)
+DISPLAY LISTENER (*)
+     2 : DISPLAY LISTENER (*)
+AMQ8630I: Сведения о команде Показать информацию получателя запросов.
+   LISTENER(LISTENER.TCP)
+AMQ8630I: Сведения о команде Показать информацию получателя запросов.
+   LISTENER(SYSTEM.DEFAULT.LISTENER.LU62)
+AMQ8630I: Сведения о команде Показать информацию получателя запросов.
+   LISTENER(SYSTEM.DEFAULT.LISTENER.NETBIOS)
+AMQ8630I: Сведения о команде Показать информацию получателя запросов.
+   LISTENER(SYSTEM.DEFAULT.LISTENER.SPX)
+AMQ8630I: Сведения о команде Показать информацию получателя запросов.
+   LISTENER(SYSTEM.DEFAULT.LISTENER.TCP)
+DISPLAY CHANNEL (*)
+     3 : DISPLAY CHANNEL (*)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(A0000001.CHL2)                  CHLTYPE(SVRCONN)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(AISCO001.CHL2)                  CHLTYPE(SVRCONN)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(AISCO002.CHL2)                  CHLTYPE(SVRCONN)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(AISCOWEB.CHL2)                  CHLTYPE(SVRCONN)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(B0000001.CHL2)                  CHLTYPE(SVRCONN)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(B7390001.CHL2)                  CHLTYPE(SVRCONN)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(CHLADMIN.CHL2)                  CHLTYPE(SVRCONN)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(G0000001.CHL2)                  CHLTYPE(SVRCONN)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(G9350001.CHL2)                  CHLTYPE(SVRCONN)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(SYSTEM.AUTO.RECEIVER)           CHLTYPE(RCVR)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(SYSTEM.AUTO.SVRCONN)            CHLTYPE(SVRCONN)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(SYSTEM.DEF.AMQP)                CHLTYPE(AMQP)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(SYSTEM.DEF.CLUSRCVR)            CHLTYPE(CLUSRCVR)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(SYSTEM.DEF.CLUSSDR)             CHLTYPE(CLUSSDR)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(SYSTEM.DEF.RECEIVER)            CHLTYPE(RCVR)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(SYSTEM.DEF.REQUESTER)           CHLTYPE(RQSTR)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(SYSTEM.DEF.SENDER)              CHLTYPE(SDR)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(SYSTEM.DEF.SERVER)              CHLTYPE(SVR)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(SYSTEM.DEF.SVRCONN)             CHLTYPE(SVRCONN)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(SYSTEM.UMS.CHL2)                CHLTYPE(SVRCONN)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(WEBCLOSE.CHL2)                  CHLTYPE(SVRCONN)
+AMQ8414I: Сведения команды Показать канал.
+   CHANNEL(SYSTEM.DEF.CLNTCONN)            CHLTYPE(CLNTCONN)
 DISPLAY AUTHINFO(*)
-И пришли мне вывод этих команд (пароли, если где-то отображаются, можешь убрать).
-По нему я смогу сказать тебе конкретно:
-какой SVRCONN создать;
-нужен ли вообще новый listener;
-какой CLNTCONN создать;
-какой CONNAME и QMNAME указать;
-как получить AMQCLCHL.TAB;
+     4 : DISPLAY AUTHINFO(*)
+AMQ8566I: Сведения команды Показать идентификационную информацию.
+   AUTHINFO(SYSTEM.DEFAULT.AUTHINFO.IDPWLDAP)
+   AUTHTYPE(IDPWLDAP)
+AMQ8566I: Сведения команды Показать идентификационную информацию.
+   AUTHINFO(SYSTEM.DEFAULT.AUTHINFO.IDPWOS)
+   AUTHTYPE(IDPWOS)
+AMQ8566I: Сведения команды Показать идентификационную информацию.
+   AUTHINFO(SYSTEM.DEFAULT.AUTHINFO.OCSP)
+   AUTHTYPE(OCSP)
+AMQ8566I: Сведения команды Показать идентификационную информацию.
+   AUTHINFO(SYSTEM.DEFAULT.AUTHINFO.CRLLDAP)
+   AUTHTYPE(CRLLDAP)
+EXIT
