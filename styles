@@ -1,24 +1,16 @@
-DECLARE
-    v_taskdef_id NUMBER := 7001;  -- Меняете здесь
-    TYPE table_list IS TABLE OF VARCHAR2(30);
-    v_tables table_list := table_list('taskdef', 'taskdef_borr', 'taskdef_desc', 
-                                       'taskdef_trigger', 'taskdef_reglm_period');
-    v_sql VARCHAR2(1000);
-BEGIN
-    FOR i IN 1..v_tables.COUNT LOOP
-        v_sql := 'UPDATE monitoring.' || v_tables(i) || 
-                 ' SET CREATE_DATE = CREATE_DATE - INTERVAL ''1'' MONTH,
-                     BEGIN_DATE = BEGIN_DATE - INTERVAL ''1'' MONTH,
-                     BEGIN_TIME = BEGIN_TIME - INTERVAL ''1'' MONTH
-                 WHERE taskdef_id = :id';
-        EXECUTE IMMEDIATE v_sql USING v_taskdef_id;
-    END LOOP;
-    COMMIT;
-    
-    -- Вывод результатов
-    FOR i IN 1..v_tables.COUNT LOOP
-        v_sql := 'SELECT * FROM monitoring.' || v_tables(i) || ' WHERE taskdef_id = :id';
-        EXECUTE IMMEDIATE v_sql USING v_taskdef_id;
-    END LOOP;
-END;
-/
+На сервере выполни:
+dspmq
+затем:
+runmqsc ИМЯ_ТВОЕГО_QM
+и внутри:
+DISPLAY QMGR
+DISPLAY LISTENER(*)
+DISPLAY CHANNEL(*)
+DISPLAY AUTHINFO(*)
+И пришли мне вывод этих команд (пароли, если где-то отображаются, можешь убрать).
+По нему я смогу сказать тебе конкретно:
+какой SVRCONN создать;
+нужен ли вообще новый listener;
+какой CLNTCONN создать;
+какой CONNAME и QMNAME указать;
+как получить AMQCLCHL.TAB;
