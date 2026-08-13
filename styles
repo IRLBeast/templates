@@ -1,68 +1,7 @@
-DISPLAY CHANNEL('AISCO001.CHL2') ALL
-     1 : DISPLAY CHANNEL('AISCO001.CHL2') ALL
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(AISCO001.CHL2)                  CHLTYPE(SVRCONN)
-   ALTDATE(2024-06-04)                     ALTTIME(10.05.13)
-   CERTLABL( )                             COMPHDR(NONE)
-   COMPMSG(NONE)                           DESCR( )
-   DISCINT(0)                              HBINT(300)
-   KAINT(AUTO)                             MAXINST(999999999)
-   MAXINSTC(999999999)                     MAXMSGL(104857600)
-   MCAUSER(MCAADMIN)                       MONCHL(QMGR)
-   RCVDATA( )                              RCVEXIT( )
-   SCYDATA( )                              SCYEXIT(CSQAUTH64(ChannelExit))
-   SENDDATA( )                             SENDEXIT( )
-   SHARECNV(0)                             SSLCAUTH(REQUIRED)
-   SSLCIPH( )                              SSLPEER( )
-   TRPTYPE(TCP)
-DISPLAY CHANNEL('B7390001.CHL2') ALL
-     2 : DISPLAY CHANNEL('B7390001.CHL2') ALL
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(B7390001.CHL2)                  CHLTYPE(SVRCONN)
-   ALTDATE(2024-06-04)                     ALTTIME(10.09.35)
-   CERTLABL( )                             COMPHDR(NONE)
-   COMPMSG(NONE)                           DESCR( )
-   DISCINT(0)                              HBINT(300)
-   KAINT(AUTO)                             MAXINST(999999999)
-   MAXINSTC(999999999)                     MAXMSGL(104857600)
-   MCAUSER(MCACLNT)                        MONCHL(QMGR)
-   RCVDATA( )                              RCVEXIT( )
-   SCYDATA( )                              SCYEXIT(CSQAUTH64(ChannelExit))
-   SENDDATA( )                             SENDEXIT( )
-   SHARECNV(0)                             SSLCAUTH(REQUIRED)
-   SSLCIPH( )                              SSLPEER( )
-   TRPTYPE(TCP)
-DISPLAY CHANNEL('WEBCLOSE.CHL2') ALL
-     3 : DISPLAY CHANNEL('WEBCLOSE.CHL2') ALL
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(WEBCLOSE.CHL2)                  CHLTYPE(SVRCONN)
-   ALTDATE(2026-07-09)                     ALTTIME(13.53.33)
-   CERTLABL( )                             COMPHDR(NONE)
-   COMPMSG(NONE)                           DESCR( )
-   DISCINT(0)                              HBINT(300)
-   KAINT(AUTO)                             MAXINST(999999999)
-   MAXINSTC(999999999)                     MAXMSGL(104857600)
-   MCAUSER(MCAWEB)                         MONCHL(QMGR)
-   RCVDATA( )                              RCVEXIT( )
-   SCYDATA( )                              SCYEXIT(CSQAUTH64(ChannelExit))
-   SENDDATA( )                             SENDEXIT( )
-   SHARECNV(0)                             SSLCAUTH(REQUIRED)
-   SSLCIPH( )                              SSLPEER( )
-   TRPTYPE(TCP)
-DISPLAY CHANNEL('AISCOWEB.CHL2') ALL
-     4 : DISPLAY CHANNEL('AISCOWEB.CHL2') ALL
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(AISCOWEB.CHL2)                  CHLTYPE(SVRCONN)
-   ALTDATE(2024-05-31)                     ALTTIME(14.18.45)
-   CERTLABL( )                             COMPHDR(NONE)
-   COMPMSG(NONE)                           DESCR( )
-   DISCINT(0)                              HBINT(300)
-   KAINT(AUTO)                             MAXINST(999999999)
-   MAXINSTC(999999999)                     MAXMSGL(104857600)
-   MCAUSER(MCAWEB)                         MONCHL(QMGR)
-   RCVDATA( )                              RCVEXIT( )
-   SCYDATA( )                              SCYEXIT(CSQAUTH64(ChannelExit))
-   SENDDATA( )                             SENDEXIT( )
-   SHARECNV(0)                             SSLCAUTH(REQUIRED)
-   SSLCIPH( )                              SSLPEER( )
-   TRPTYPE(TCP)
+Следующим шагом пришли мне вывод этих трёх вещей:
+1.
+DISPLAY AUTHINFO('SYSTEM.DEFAULT.AUTHINFO.IDPWOS') ALL
+2.
+DISPLAY AUTHINFO('SYSTEM.DEFAULT.AUTHINFO.IDPWLDAP') ALL
+3. Результат PowerShell-поиска:
+Get-ChildItem "C:\Program Files\IBM\MQ" -Recurse -Filter "CSQAUTH64*" -ErrorAction SilentlyContinue
