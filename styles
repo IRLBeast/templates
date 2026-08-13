@@ -1,146 +1,350 @@
-PS C:\Windows\system32> dspmq
-QMNAME(AISCOSR2_MQM)                                      STATUS(Выполняется)
-PS C:\Windows\system32> dspmqver
-Name:        IBM MQ
-Version:     9.2.3.0
-Level:       p923-L210708
-BuildType:   IKAP - (Production)
-Platform:    IBM MQ for Windows (x64 platform)
-Mode:        64-bit
-O/S:         Windows Server 2019 Server Standard Edition, Build 17763
-InstName:    MQSeriesService
-InstDesc:
-Primary:     Yes
-InstPath:    C:\Program Files\IBM\MQ
-DataPath:    C:\ProgramData\IBM\MQ
-MaxCmdLevel: 923
-LicenseType: Production
-PS C:\Windows\system32> runmqsc AISCOSR2_MQM
-5724-H72 (C) Copyright IBM Corp. 1994, 2021.
-Выполняется запуск MQSC для администратора очередей AISCOSR2_MQM.
-
-
-DISPLAY QMGR
-     1 : DISPLAY QMGR
-AMQ8408I: Сведения о команде Показать администратор очередей.
-   QMNAME(AISCOSR2_MQM)                    ACCTCONO(DISABLED)
-   ACCTINT(1800)                           ACCTMQI(OFF)
-   ACCTQ(OFF)                              ACTIVREC(MSG)
-   ACTVCONO(DISABLED)                      ACTVTRC(OFF)
-   ADVCAP(DISABLED)                        ALTDATE(2026-07-14)
-   ALTTIME(14.44.18)                       AMQPCAP(NO)
-   AUTHOREV(DISABLED)                      CCSID(866)
-   CERTLABL(ibmwebspheremqaiscosr2_mqm)    CERTVPOL(ANY)
-   CHAD(DISABLED)                          CHADEV(DISABLED)
-   CHADEXIT( )                             CHLEV(DISABLED)
-   CHLAUTH(DISABLED)                       CLWLDATA( )
-   CLWLEXIT( )                             CLWLLEN(100)
-   CLWLMRUC(999999999)                     CLWLUSEQ(LOCAL)
-   CMDEV(DISABLED)                         CMDLEVEL(923)
-   COMMANDQ(SYSTEM.ADMIN.COMMAND.QUEUE)    CONFIGEV(DISABLED)
-   CONNAUTH( )                             CRDATE(2024-05-31)
-   CRTIME(14.18.37)                        CUSTOM( )
-   DEADQ(DEAD.QUEUE)                       DEFCLXQ(SCTQ)
-   DEFXMITQ( )                             DESCR( )
-   DISTL(YES)                              IMGINTVL(60)
-   IMGLOGLN(OFF)                           IMGRCOVO(YES)
-   IMGRCOVQ(YES)                           IMGSCHED(MANUAL)
-   INHIBTEV(DISABLED)                      IPADDRV(IPV4)
-   LOCALEV(DISABLED)                       LOGGEREV(DISABLED)
-   MARKINT(5000)                           MAXHANDS(1024)
-   MAXMSGL(104857600)                      MAXPROPL(NOLIMIT)
-   MAXPRTY(9)                              MAXUMSGS(10000)
-   MONACLS(QMGR)                           MONCHL(OFF)
-   MONQ(OFF)                               PARENT( )
-   PERFMEV(DISABLED)                       PLATFORM(WINDOWSNT)
-   PSMODE(ENABLED)                         PSCLUS(ENABLED)
-   PSNPMSG(DISCARD)                        PSNPRES(NORMAL)
-   PSRTYCNT(5)                             PSSYNCPT(IFPER)
-   QMID(AISCOSR2_MQM_2024-05-31_14.18.37)
-   REMOTEEV(DISABLED)                      REPOS( )
-   REPOSNL( )                              REVDNS(DISABLED)
-   ROUTEREC(MSG)                           SCHINIT(QMGR)
-   SCMDSERV(QMGR)                          SPLCAP(DISABLED)
-   SSLCRLNL( )                             SSLCRYP( )
-   SSLEV(DISABLED)                         SSLFIPS(NO)
-   SSLKEYR(C:\ProgramData\IBM\MQ\qmgrs\AISCOSR2_MQM\ssl\key)
-   SSLRKEYC(0)                             STATACLS(QMGR)
-   STATCHL(OFF)                            STATINT(1800)
-   STATMQI(OFF)                            STATQ(OFF)
-   STRSTPEV(ENABLED)                       SUITEB(NONE)
-   SYNCPT                                  TREELIFE(1800)
-   TRIGINT(999999999)                      VERSION(09020300)
-   XRCAP(NO)
-DISPLAY LISTENER (*)
-     2 : DISPLAY LISTENER (*)
+DISPLAY LISTENER('LISTENER.TCP') ALL
+     2 : DISPLAY LISTENER('LISTENER.TCP') ALL
 AMQ8630I: Сведения о команде Показать информацию получателя запросов.
-   LISTENER(LISTENER.TCP)
-AMQ8630I: Сведения о команде Показать информацию получателя запросов.
-   LISTENER(SYSTEM.DEFAULT.LISTENER.LU62)
-AMQ8630I: Сведения о команде Показать информацию получателя запросов.
-   LISTENER(SYSTEM.DEFAULT.LISTENER.NETBIOS)
-AMQ8630I: Сведения о команде Показать информацию получателя запросов.
-   LISTENER(SYSTEM.DEFAULT.LISTENER.SPX)
-AMQ8630I: Сведения о команде Показать информацию получателя запросов.
-   LISTENER(SYSTEM.DEFAULT.LISTENER.TCP)
-DISPLAY CHANNEL (*)
-     3 : DISPLAY CHANNEL (*)
+   LISTENER(LISTENER.TCP)                  CONTROL(QMGR)
+   TRPTYPE(TCP)                            PORT(1418)
+   IPADDR( )                               BACKLOG(0)
+   DESCR( )                                ALTDATE(2024-05-31)
+   ALTTIME(14.18.45)
+DISPLAY CHANNEL('A0000001.CHL2') ALL
+     3 : DISPLAY CHANNEL('A0000001.CHL2') ALL
 AMQ8414I: Сведения команды Показать канал.
    CHANNEL(A0000001.CHL2)                  CHLTYPE(SVRCONN)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(AISCO001.CHL2)                  CHLTYPE(SVRCONN)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(AISCO002.CHL2)                  CHLTYPE(SVRCONN)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(AISCOWEB.CHL2)                  CHLTYPE(SVRCONN)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(B0000001.CHL2)                  CHLTYPE(SVRCONN)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(B7390001.CHL2)                  CHLTYPE(SVRCONN)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(CHLADMIN.CHL2)                  CHLTYPE(SVRCONN)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(G0000001.CHL2)                  CHLTYPE(SVRCONN)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(G9350001.CHL2)                  CHLTYPE(SVRCONN)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(SYSTEM.AUTO.RECEIVER)           CHLTYPE(RCVR)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(SYSTEM.AUTO.SVRCONN)            CHLTYPE(SVRCONN)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(SYSTEM.DEF.AMQP)                CHLTYPE(AMQP)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(SYSTEM.DEF.CLUSRCVR)            CHLTYPE(CLUSRCVR)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(SYSTEM.DEF.CLUSSDR)             CHLTYPE(CLUSSDR)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(SYSTEM.DEF.RECEIVER)            CHLTYPE(RCVR)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(SYSTEM.DEF.REQUESTER)           CHLTYPE(RQSTR)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(SYSTEM.DEF.SENDER)              CHLTYPE(SDR)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(SYSTEM.DEF.SERVER)              CHLTYPE(SVR)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(SYSTEM.DEF.SVRCONN)             CHLTYPE(SVRCONN)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(SYSTEM.UMS.CHL2)                CHLTYPE(SVRCONN)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(WEBCLOSE.CHL2)                  CHLTYPE(SVRCONN)
-AMQ8414I: Сведения команды Показать канал.
-   CHANNEL(SYSTEM.DEF.CLNTCONN)            CHLTYPE(CLNTCONN)
-DISPLAY AUTHINFO(*)
-     4 : DISPLAY AUTHINFO(*)
-AMQ8566I: Сведения команды Показать идентификационную информацию.
-   AUTHINFO(SYSTEM.DEFAULT.AUTHINFO.IDPWLDAP)
-   AUTHTYPE(IDPWLDAP)
-AMQ8566I: Сведения команды Показать идентификационную информацию.
-   AUTHINFO(SYSTEM.DEFAULT.AUTHINFO.IDPWOS)
-   AUTHTYPE(IDPWOS)
-AMQ8566I: Сведения команды Показать идентификационную информацию.
-   AUTHINFO(SYSTEM.DEFAULT.AUTHINFO.OCSP)
-   AUTHTYPE(OCSP)
-AMQ8566I: Сведения команды Показать идентификационную информацию.
-   AUTHINFO(SYSTEM.DEFAULT.AUTHINFO.CRLLDAP)
-   AUTHTYPE(CRLLDAP)
-EXIT
+   ALTDATE(2024-05-31)                     ALTTIME(14.18.45)
+   CERTLABL( )                             COMPHDR(NONE)
+   COMPMSG(NONE)                           DESCR( )
+   DISCINT(0)                              HBINT(300)
+   KAINT(AUTO)                             MAXINST(999999999)
+   MAXINSTC(999999999)                     MAXMSGL(104857600)
+   MCAUSER(MCAADMIN)                       MONCHL(QMGR)
+   RCVDATA( )                              RCVEXIT( )
+   SCYDATA( )                              SCYEXIT(CSQAUTH64(ChannelExit))
+   SENDDATA( )                             SENDEXIT( )
+   SHARECNV(0)                             SSLCAUTH(REQUIRED)
+   SSLCIPH( )                              SSLPEER( )
+   TRPTYPE(TCP)
+DISPLAY QLOCAL(*) DESCR PUT GET MAXMSGL
+     4 : DISPLAY QLOCAL(*) DESCR PUT GET MAXMSGL
+AMQ8409I: Сведения об очереди.
+   QUEUE(ADMIN_NOTIFY.LQ)                  TYPE(QLOCAL)
+   DESCR(Local Queue SA_Admin)             GET(ENABLED)
+   MAXMSGL(4194304)                        PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(ADMIN_QUERY.LQ)                   TYPE(QLOCAL)
+   DESCR(Local Queue CR_Admin)             GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(AMQ.MQEXPLORER.6A562297235C9802)
+   TYPE(QLOCAL)                            DESCR( )
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(B7390001FC0C9C5CE005_INCOMMON_QUERY.LQ)
+   TYPE(QLOCAL)                            DESCR(Model Queue)
+   GET(ENABLED)                            MAXMSGL(104857600)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(CHLADMIN_ANSWER.LQ)               TYPE(QLOCAL)
+   DESCR(Queue answer for remote RegAuth)
+   GET(ENABLED)                            MAXMSGL(104857600)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(CHLADMIN_QUERY.LQ)                TYPE(QLOCAL)
+   DESCR(Local Queue for remote RegAuth)   GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(DEAD.QUEUE)                       TYPE(QLOCAL)
+   DESCR(Dead-letter Local Queue)          GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(GOVCLNT_QUERY.LQ)                 TYPE(QLOCAL)
+   DESCR(Local Queue government)           GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(GOVWEB_ANSWER.LQ)                 TYPE(QLOCAL)
+   DESCR(Queue answer government)          GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(GOVWEB_ANSWER2.LQ)                TYPE(QLOCAL)
+   DESCR(Queue answer government)          GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(GOVWEB_QUERY.LQ)                  TYPE(QLOCAL)
+   DESCR(Working Local Queue government)   GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(GOVWEB_QUERY2.LQ)                 TYPE(QLOCAL)
+   DESCR(Working Local Queue government)   GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(INCOMMON_QUERY.LQ)                TYPE(QLOCAL)
+   DESCR(Working Local Queue)              GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SECURITY_QUERY.LQ)                TYPE(QLOCAL)
+   DESCR(Message security for clients)     GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(STAT_QUERY.LQ)                    TYPE(QLOCAL)
+   DESCR(Messages STATISTIC from router)   GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.ADMIN.ACCOUNTING.QUEUE)    TYPE(QLOCAL)
+   DESCR(IBM MQ Administration Accounting Queue)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.ADMIN.ACTIVITY.QUEUE)      TYPE(QLOCAL)
+   DESCR(IBM MQ Administration Activity Queue)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.ADMIN.CHANNEL.EVENT)       TYPE(QLOCAL)
+   DESCR(IBM MQ Channel Related Event Queue)
+   GET(ENABLED)                            MAXMSGL(9000)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.ADMIN.COMMAND.EVENT)       TYPE(QLOCAL)
+   DESCR(IBM MQ Command Event Queue)       GET(ENABLED)
+   MAXMSGL(4194304)                        PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.ADMIN.COMMAND.QUEUE)       TYPE(QLOCAL)
+   DESCR(IBM MQ Administration Command Queue)
+   GET(ENABLED)                            MAXMSGL(32762)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.ADMIN.CONFIG.EVENT)        TYPE(QLOCAL)
+   DESCR(IBM MQ Configuration Event Queue)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.ADMIN.LOGGER.EVENT)        TYPE(QLOCAL)
+   DESCR(IBM MQ Logger Event Queue)        GET(ENABLED)
+   MAXMSGL(9000)                           PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.ADMIN.PERFM.EVENT)         TYPE(QLOCAL)
+   DESCR(IBM MQ Performance Related Event Queue)
+   GET(ENABLED)                            MAXMSGL(9000)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.ADMIN.PUBSUB.EVENT)        TYPE(QLOCAL)
+   DESCR(IBM MQ Publish/Subscribe Related Event Queue)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.ADMIN.QMGR.EVENT)          TYPE(QLOCAL)
+   DESCR(IBM MQ Queue Manager Related Event Queue)
+   GET(ENABLED)                            MAXMSGL(32762)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.ADMIN.STATISTICS.QUEUE)    TYPE(QLOCAL)
+   DESCR(IBM MQ Administration Statistics Queue)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.ADMIN.TRACE.ACTIVITY.QUEUE)
+   TYPE(QLOCAL)
+   DESCR(IBM MQ Administration Trace Activity Queue)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.ADMIN.TRACE.ROUTE.QUEUE)   TYPE(QLOCAL)
+   DESCR(IBM MQ Administration Trace Route Queue)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.AMQP.COMMAND.QUEUE)        TYPE(QLOCAL)
+   DESCR(IBM MQ Administration Command Queue)
+   GET(ENABLED)                            MAXMSGL(32762)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.AUTH.DATA.QUEUE)           TYPE(QLOCAL)
+   DESCR(IBM MQ Authority Data Queue)      GET(ENABLED)
+   MAXMSGL(4194304)                        PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.BROKER.ADMIN.STREAM)       TYPE(QLOCAL)
+   DESCR(Admin stream for queued Pub/Sub interface)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.BROKER.CONTROL.QUEUE)      TYPE(QLOCAL)
+   DESCR(Control queue for queued Pub/Sub interface)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.BROKER.DEFAULT.STREAM)     TYPE(QLOCAL)
+   DESCR(Default stream for queued Pub/Sub interface)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.BROKER.INTER.BROKER.COMMUNICATIONS)
+   TYPE(QLOCAL)
+   DESCR(MQSeries Publish/Subscribe internal reply queue)
+   GET(ENABLED)                            MAXMSGL(104857600)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.CHANNEL.INITQ)             TYPE(QLOCAL)
+   DESCR(IBM MQ Channel Initiation Queue)
+   GET(ENABLED)                            MAXMSGL(2000)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.CHANNEL.SYNCQ)             TYPE(QLOCAL)
+   DESCR(IBM MQ Channel Sync Queue)        GET(ENABLED)
+   MAXMSGL(20000)                          PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.CHLAUTH.DATA.QUEUE)        TYPE(QLOCAL)
+   DESCR(IBM MQ Channel Authentication Data Queue)
+   GET(ENABLED)                            MAXMSGL(104857600)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.CICS.INITIATION.QUEUE)     TYPE(QLOCAL)
+   DESCR(IBM MQ Default CICS Initiation queue)
+   GET(ENABLED)                            MAXMSGL(1000)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.CLUSTER.COMMAND.QUEUE)     TYPE(QLOCAL)
+   DESCR(IBM MQ Cluster Command Queue)     GET(ENABLED)
+   MAXMSGL(4194304)                        PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.CLUSTER.HISTORY.QUEUE)     TYPE(QLOCAL)
+   DESCR(IBM MQ Cluster History Queue)     GET(ENABLED)
+   MAXMSGL(4194304)                        PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.CLUSTER.REPOSITORY.QUEUE)
+   TYPE(QLOCAL)
+   DESCR(IBM MQ Cluster Repository Queue)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.CLUSTER.TRANSMIT.QUEUE)    TYPE(QLOCAL)
+   DESCR(IBM MQ Cluster Transmission Queue)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.DDELAY.LOCAL.QUEUE)        TYPE(QLOCAL)
+   DESCR(IBM MQ Deferred Delivery Queue)   GET(ENABLED)
+   MAXMSGL(4194304)                        PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.DEAD.LETTER.QUEUE)         TYPE(QLOCAL)
+   DESCR(IBM MQ Default Dead Letter Queue)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.DEFAULT.INITIATION.QUEUE)
+   TYPE(QLOCAL)
+   DESCR(IBM MQ Default Initiation Queue)
+   GET(ENABLED)                            MAXMSGL(1000)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.DEFAULT.LOCAL.QUEUE)       TYPE(QLOCAL)
+   DESCR( )                                GET(ENABLED)
+   MAXMSGL(4194304)                        PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.DOTNET.XARECOVERY.QUEUE)   TYPE(QLOCAL)
+   DESCR(IBM MQ .NET XA Recovery Queue)    GET(ENABLED)
+   MAXMSGL(4194304)                        PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.DURABLE.SUBSCRIBER.QUEUE)
+   TYPE(QLOCAL)
+   DESCR(Store of information about durable subscribers)
+   GET(ENABLED)                            MAXMSGL(104857600)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.HIERARCHY.STATE)           TYPE(QLOCAL)
+   DESCR(MQ Publish/Subscribe Distributed Pub/sub hierarchy relationship)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.INTER.QMGR.CONTROL)        TYPE(QLOCAL)
+   DESCR(MQ Publish/Subscribe Distributed Pub/sub Control Queue)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.INTER.QMGR.FANREQ)         TYPE(QLOCAL)
+   DESCR(MQ Publish/Subscribe Distributed Pub/sub proxy-sub request queue)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.INTER.QMGR.PUBS)           TYPE(QLOCAL)
+   DESCR(MQ Publish/Subscribe Distributed Pub/sub Publications)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.INTERNAL.REPLY.QUEUE)      TYPE(QLOCAL)
+   DESCR(IBM MQ Internal Reply Queue)      GET(ENABLED)
+   MAXMSGL(32762)                          PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.INTERNAL.REQUEST.QUEUE)    TYPE(QLOCAL)
+   DESCR(IBM MQ Internal Request Queue)    GET(ENABLED)
+   MAXMSGL(32762)                          PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.PENDING.DATA.QUEUE)        TYPE(QLOCAL)
+   DESCR(IBM MQ Deferred Message Queue)    GET(ENABLED)
+   MAXMSGL(4194304)                        PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.PROTECTION.ERROR.QUEUE)    TYPE(QLOCAL)
+   DESCR(IBM MQ Message Protection Error Queue)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.PROTECTION.POLICY.QUEUE)   TYPE(QLOCAL)
+   DESCR(IBM MQ Message Protection Policy Queue)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.REST.REPLY.QUEUE)          TYPE(QLOCAL)
+   DESCR(IBM MQ REST Reply Queue)          GET(ENABLED)
+   MAXMSGL(4194304)                        PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.RETAINED.PUB.QUEUE)        TYPE(QLOCAL)
+   DESCR(Store of retained publications)   GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.SELECTION.EVALUATION.QUEUE)
+   TYPE(QLOCAL)
+   DESCR(IBM MQ Selection Evaluation Queue)
+   GET(ENABLED)                            MAXMSGL(104857600)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(SYSTEM.SELECTION.VALIDATION.QUEUE)
+   TYPE(QLOCAL)
+   DESCR(IBM MQ Selection Validation Queue)
+   GET(ENABLED)                            MAXMSGL(4194304)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(UPDATE_QUERY.LQ)                  TYPE(QLOCAL)
+   DESCR(Local Queue for request on update programs)
+   GET(ENABLED)                            MAXMSGL(104857600)
+   PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(WEB_ANSWER.LQ)                    TYPE(QLOCAL)
+   DESCR(Queue answer in WEB portal)       GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(WEB_ANSWER2.LQ)                   TYPE(QLOCAL)
+   DESCR(Queue answer in WEB portal)       GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(WEB_ANSWER3.LQ)                   TYPE(QLOCAL)
+   DESCR(Queue answer in WEB portal)       GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(WEB_ANSWER4.LQ)                   TYPE(QLOCAL)
+   DESCR(Queue answer in WEB portal)       GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(WEB_QUERY.LQ)                     TYPE(QLOCAL)
+   DESCR(WEB portal)                       GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(WEB_QUERY2.LQ)                    TYPE(QLOCAL)
+   DESCR(Queue request from Web-Close)     GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(WEB_QUERY3.LQ)                    TYPE(QLOCAL)
+   DESCR(Queue request from Web-Close)     GET(ENABLED)
+   MAXMSGL(104857600)                      PUT(ENABLED)
+AMQ8409I: Сведения об очереди.
+   QUEUE(WEB_QUERY4.LQ)                    TYPE(QLOCAL)
+   DESCR(Queue request from Web-Close)     GET(ENABLED)
+   MAXMSGL(104857600)
