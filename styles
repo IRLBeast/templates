@@ -1,7 +1,24 @@
-Следующим шагом пришли мне вывод этих трёх вещей:
-1.
 DISPLAY AUTHINFO('SYSTEM.DEFAULT.AUTHINFO.IDPWOS') ALL
-2.
+     5 : DISPLAY AUTHINFO('SYSTEM.DEFAULT.AUTHINFO.IDPWOS') ALL
+AMQ8566I: Сведения команды Показать идентификационную информацию.
+   AUTHINFO(SYSTEM.DEFAULT.AUTHINFO.IDPWOS)
+   AUTHTYPE(IDPWOS)                        ADOPTCTX(YES)
+   DESCR( )                                CHCKCLNT(REQDADM)
+   CHCKLOCL(OPTIONAL)                      FAILDLAY(1)
+   AUTHENMD(OS)                            ALTDATE(2024-05-31)
+   ALTTIME(14.18.39)
 DISPLAY AUTHINFO('SYSTEM.DEFAULT.AUTHINFO.IDPWLDAP') ALL
-3. Результат PowerShell-поиска:
-Get-ChildItem "C:\Program Files\IBM\MQ" -Recurse -Filter "CSQAUTH64*" -ErrorAction SilentlyContinue
+     6 : DISPLAY AUTHINFO('SYSTEM.DEFAULT.AUTHINFO.IDPWLDAP') ALL
+AMQ8566I: Сведения команды Показать идентификационную информацию.
+   AUTHINFO(SYSTEM.DEFAULT.AUTHINFO.IDPWLDAP)
+   AUTHTYPE(IDPWLDAP)                      ADOPTCTX(YES)
+   DESCR( )                                CONNAME( )
+   CHCKCLNT(REQUIRED)                      CHCKLOCL(OPTIONAL)
+   CLASSGRP( )                             CLASSUSR( )
+   FAILDLAY(1)                             FINDGRP( )
+   BASEDNG( )                              BASEDNU( )
+   LDAPUSER( )                             LDAPPWD( )
+   SHORTUSR( )                             GRPFIELD( )
+   USRFIELD( )                             AUTHORMD(OS)
+   NESTGRP(NO)                             SECCOMM(NO)
+   ALTDATE(2024-05-31)                     ALTTIME(14.18.39)
