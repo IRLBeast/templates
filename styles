@@ -1,24 +1,9 @@
-DISPLAY AUTHINFO('SYSTEM.DEFAULT.AUTHINFO.IDPWOS') ALL
-     5 : DISPLAY AUTHINFO('SYSTEM.DEFAULT.AUTHINFO.IDPWOS') ALL
-AMQ8566I: Сведения команды Показать идентификационную информацию.
-   AUTHINFO(SYSTEM.DEFAULT.AUTHINFO.IDPWOS)
-   AUTHTYPE(IDPWOS)                        ADOPTCTX(YES)
-   DESCR( )                                CHCKCLNT(REQDADM)
-   CHCKLOCL(OPTIONAL)                      FAILDLAY(1)
-   AUTHENMD(OS)                            ALTDATE(2024-05-31)
-   ALTTIME(14.18.39)
-DISPLAY AUTHINFO('SYSTEM.DEFAULT.AUTHINFO.IDPWLDAP') ALL
-     6 : DISPLAY AUTHINFO('SYSTEM.DEFAULT.AUTHINFO.IDPWLDAP') ALL
-AMQ8566I: Сведения команды Показать идентификационную информацию.
-   AUTHINFO(SYSTEM.DEFAULT.AUTHINFO.IDPWLDAP)
-   AUTHTYPE(IDPWLDAP)                      ADOPTCTX(YES)
-   DESCR( )                                CONNAME( )
-   CHCKCLNT(REQUIRED)                      CHCKLOCL(OPTIONAL)
-   CLASSGRP( )                             CLASSUSR( )
-   FAILDLAY(1)                             FINDGRP( )
-   BASEDNG( )                              BASEDNU( )
-   LDAPUSER( )                             LDAPPWD( )
-   SHORTUSR( )                             GRPFIELD( )
-   USRFIELD( )                             AUTHORMD(OS)
-   NESTGRP(NO)                             SECCOMM(NO)
-   ALTDATE(2024-05-31)                     ALTTIME(14.18.39)
+https://habr.com/ru/companies/ncloudtech/articles/871748/
+
+https://habr.com/ru/articles/872592/
+
+https://habr.com/ru/articles/871452/
+
+https://habr.com/ru/articles/872254/
+
+https://habr.com/ru/companies/ruvds/articles/870400/
