@@ -1,0 +1,55 @@
+def run_pytest(test_names, browser):
+
+    run_id = str(uuid.uuid4())
+
+    report_file = f"reports/{run_id}.json"
+
+    os.makedirs("reports", exist_ok=True)
+
+    selected_paths = []
+
+    for test_name in test_names:
+
+        if test_name in TESTS_MAP:
+            selected_paths.append(
+                TESTS_MAP[test_name]
+            )
+
+    if not selected_paths:
+        return {
+            "error": "No valid tests selected"
+        }
+
+    command = [
+        sys.executable, #РґР»СЏ С„РёРєСЃР° РѕС€РёР±РєРё Р·Р°РїСѓСЃРєР° С‚РµСЃС‚РѕРІ (РЅРµ СѓС…РѕРґРёР» РїРѕСЃС‚ Р·Р°РїСЂРѕСЃ РІ run_test)
+        "-m"
+        "pytest",
+        *selected_paths,
+        "-v",
+        "--headed",
+        "--json-report",
+        f"--json-report-file={report_file}"
+    ]
+
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True
+    )
+
+    report_data = {}
+
+    if os.path.exists(report_file):
+
+        with open(report_file, "r", encoding="utf-8") as f:
+            report_data = json.load(f)
+
+    text_report = build_text_report(report_data)
+
+    return {
+        "run_id": run_id,
+        "stdout": result.stdout,
+        "stderr": result.stderr,
+        "report": report_data,
+        "text_report": text_report
+    }
