@@ -1,25 +1,353 @@
-https://habr.com/ru/articles/866468/
+1. Чекбоксы браузеров
+Например:
+HTML
+<ul class="browser-tags">
+    <li>
+        <input type="checkbox"
+               id="chrome"
+               value="chrome"
+               checked>
+        <label for="chrome">Chrome</label>
+    </li>
 
-https://habr.com/ru/companies/ruvds/articles/866084/
+    <li>
+        <input type="checkbox"
+               id="firefox"
+               value="firefox"
+               checked>
+        <label for="firefox">Firefox</label>
+    </li>
 
-https://habr.com/ru/companies/selectel/articles/1068642/
+    <li>
+        <input type="checkbox"
+               id="edge"
+               value="edge"
+               checked>
+        <label for="edge">Edge</label>
+    </li>
+</ul>
+checked означает, что при открытии страницы они выбраны.
+2. Получаем браузеры в JavaScript
+Сейчас у тебя уже есть:
+const selected = [];
 
-https://habr.com/ru/companies/netologyru/articles/1051792/
+document.querySelectorAll(
+    ".ks-cboxtags input:checked"
+).forEach(cb => {
+    selected.push(cb.value);
+});
+Для браузеров делаем аналогично:
+const browsers = [];
 
-https://habr.com/ru/articles/917226/
+document.querySelectorAll(
+    ".browser-tags input:checked"
+).forEach(cb => {
+    browsers.push(cb.value);
+});
+И обязательно проверяем, что выбран хотя бы один:
+if (browsers.length === 0) {
+    alert("Select at least one browser");
+    return;
+}
+3. Полностью runSelectedTests()
+Я бы сейчас сделал функцию вот такой:
+function runSelectedTests() {
 
-https://habr.com/ru/companies/servermall/articles/915328/
+    const selected = [];
+    const browsers = [];
 
-https://habr.com/ru/articles/916966/
+    // Получаем выбранные тесты
+    document.querySelectorAll(
+        ".ks-cboxtags input:checked"
+    ).forEach(cb => {
+        selected.push(cb.value);
+    });
 
-https://habr.com/ru/articles/916026/
+    // Получаем выбранные браузеры
+    document.querySelectorAll(
+        ".browser-tags input:checked"
+    ).forEach(cb => {
+        browsers.push(cb.value);
+    });
 
-https://habr.com/ru/companies/ruvds/articles/915448/
+    if (selected.length === 0) {
+        alert("Select at least one test");
+        return;
+    }
 
-https://habr.com/ru/articles/915706/
+    if (browsers.length === 0) {
+        alert("Select at least one browser");
+        return;
+    }
 
-https://habr.com/ru/companies/otus/articles/915944/
+    document.getElementById("output").textContent =
+        "Running tests...";
 
-https://habr.com/ru/articles/911196/
+    fetch("/run-tests/", {
 
-https://habr.com/ru/companies/ruvds/articles/910418/
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json",
+        },
+
+        body: JSON.stringify({
+            tests: selected,
+            browsers: browsers
+        })
+
+    })
+
+    .then(res => res.json())
+
+    .then(data => {
+
+        let output = "";
+
+        if (data.text_report) {
+            output += data.text_report;
+        }
+
+        if (data.stderr) {
+            output += "\n\nERRORS:\n" + data.stderr;
+        }
+
+        document.getElementById("output").textContent = output;
+    })
+
+    .catch(err => {
+
+        document.getElementById("output").textContent =
+            "Error: " + err;
+
+    });
+}
+Теперь браузеры реально отправляются Django.
+4. Что придет в Django
+Например, пользователь оставил:
+☐ Chrome
+☑ Firefox
+☐ Edge
+и выбрал:
+☑ kr_legal
+Django получит:
+{
+    "tests": ["kr_legal"],
+    "browsers": ["firefox"]
+}
+Если ничего не снимал:
+{
+    "tests": ["kr_legal"],
+    "browsers": ["chrome", "firefox", "edge"]
+}
+5. Меняем views.py
+Сейчас у тебя, вероятно, примерно:
+body = json.loads(request.body)
+
+tests = body.get("tests", [])
+
+result = run_pytest(tests)
+Меняем на:
+body = json.loads(request.body)
+
+tests = body.get("tests", [])
+
+browsers = body.get(
+    "browsers",
+    ["chrome", "firefox", "edge"]
+)
+
+result = run_pytest(
+    tests,
+    browsers
+)
+Обрати внимание на:
+["chrome", "firefox", "edge"]
+Это защита на случай, если браузеры вообще не передали.
+То есть по умолчанию будут все три.
+6. Теперь API
+Здесь вообще всё просто.
+Только Firefox
+PowerShell:
+$body = @{
+    tests = @("kr_legal")
+    browsers = @("firefox")
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+    -Uri "http://10.3.9.5:8000/api/v1/run/" `
+    -Method Post `
+    -ContentType "application/json" `
+    -Body $body
+Chrome + Firefox
+$body = @{
+    tests = @("kr_legal")
+    browsers = @("chrome", "firefox")
+} | ConvertTo-Json
+Все три
+$body = @{
+    tests = @("kr_legal")
+    browsers = @("chrome", "firefox", "edge")
+} | ConvertTo-Json
+7. А теперь самое главное — runner.py
+Здесь нужно сделать соответствие:
+chrome → chromium
+firefox → firefox
+edge → chromium + channel=msedge
+Потому что Playwright не использует название chrome как browser engine.
+Для Chrome используется Chromium.
+Для Edge тоже Chromium, но с другим channel.
+То есть команды будут:
+Chrome
+pytest ... --browser chromium
+Firefox
+pytest ... --browser firefox
+Edge
+pytest ... --browser chromium --browser-channel msedge
+8. Я бы сделал отдельную функцию
+В runner.py:
+def get_browser_args(browser):
+
+    if browser == "chrome":
+        return [
+            "--browser",
+            "chromium"
+        ]
+
+    if browser == "firefox":
+        return [
+            "--browser",
+            "firefox"
+        ]
+
+    if browser == "edge":
+        return [
+            "--browser",
+            "chromium",
+            "--browser-channel",
+            "msedge"
+        ]
+
+    raise ValueError(
+        f"Unsupported browser: {browser}"
+    )
+Тогда вся логика браузеров находится в одном месте.
+9. И run_pytest()
+Например:
+def run_pytest(test_names, browsers):
+
+    run_id = str(uuid.uuid4())
+
+    os.makedirs("reports", exist_ok=True)
+
+    selected_paths = []
+
+    for test_name in test_names:
+
+        if test_name in TESTS_MAP:
+            selected_paths.append(
+                TESTS_MAP[test_name]
+            )
+
+    if not selected_paths:
+
+        return {
+            "error": "No valid tests selected"
+        }
+
+    results = {}
+
+    for browser in browsers:
+
+        browser_args = get_browser_args(browser)
+
+        report_file = (
+            f"reports/{run_id}_{browser}.json"
+        )
+
+        command = [
+            sys.executable,
+            "-m",
+            "pytest",
+            *selected_paths,
+            "-v",
+            "-s",
+            *browser_args,
+            "--json-report",
+            f"--json-report-file={report_file}"
+        ]
+
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True
+        )
+
+        results[browser] = {
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+            "report_file": report_file
+        }
+
+    return {
+        "run_id": run_id,
+        "results": results
+    }
+10. Но здесь есть важный момент
+Ты сейчас используешь:
+--browser chromium
+и фикстуру:
+def page(context):
+Это как раз правильно.
+Тест менять не нужно.
+Например:
+def test_login(page):
+
+    page.goto("http://q-web-open/")
+
+    page.click("a[href='/Personal']")
+При запуске:
+pytest --browser chromium
+он получит Chromium.
+При:
+pytest --browser firefox
+тот же самый тест получит Firefox.
+А при:
+pytest --browser chromium --browser-channel msedge
+получит Edge.
+Это одно из главных преимуществ pytest-playwright.
+11. Установка браузеров
+На Windows в твоей venv:
+python -m playwright install chromium firefox
+Для Edge отдельно:
+python -m playwright install msedge
+Но тут есть нюанс: Microsoft Edge обычно уже установлен на Windows, и Playwright может использовать установленный Edge через channel msedge.
+На Debian сервере я бы устанавливал:
+python -m playwright install chromium firefox
+и системные зависимости:
+python -m playwright install-deps chromium firefox
+Edge на Linux тоже возможен, но это уже отдельный вопрос установки самого Microsoft Edge. Поэтому сначала я бы проверил Chrome + Firefox, а Edge отдельно настроил на сервере.
+И еще один важный момент
+Ты написала:
+по умолчанию они все три были включены для веба и API
+Для веба это понятно — checked.
+Для API checked вообще не существует. Поэтому API должен иметь собственное правило:
+browsers = body.get(
+    "browsers",
+    ["chrome", "firefox", "edge"]
+)
+Получается очень удобно:
+Запрос
+Результат
+browsers не передан
+Chrome + Firefox + Edge
+["chrome"]
+Только Chrome
+["firefox"]
+Только Firefox
+["edge"]
+Только Edge
+["chrome", "firefox"]
+Chrome + Firefox
+И веб, и API используют один и тот же run_pytest(tests, browsers).
+Это именно та архитектура, которую я бы сейчас оставил: дальше, когда мы вернемся к Celery, эту функцию уже можно будет превратить в фоновые задачи, не меняя контракт веб-интерфейса и API.
