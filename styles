@@ -42,3 +42,5 @@ $process.WaitForExit()
 
 $fs.Dispose()
 $process.Dispose()
+
+Invoke-RestMethod -Uri "http://10.10.20.20:8080/Api/start" -Method POST -ContentType "application/json" -Body ""
