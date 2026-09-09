@@ -2,8 +2,11 @@ Error: SyntaxError: Unexpected token '<', "<html>
   <"... is not valid JSON
 
 
+$workDir = (Get-Location).Path
+
 $process = New-Object System.Diagnostics.Process
-$process.StartInfo.FileName = ".\cbt.creditcomplex.resourceprovider.exe"
+$process.StartInfo.FileName = "$workDir\cbt.creditcomplex.resourceprovider.exe"
+$process.StartInfo.WorkingDirectory = $workDir
 $process.StartInfo.UseShellExecute = $false
 $process.StartInfo.RedirectStandardOutput = $true
 $process.StartInfo.RedirectStandardError = $true
@@ -11,7 +14,7 @@ $process.StartInfo.CreateNoWindow = $true
 
 $process.Start()
 
-$fileconfig = (Get-ChildItem -Path "." -Filter "*.exe.config")[0].FullName
+$fileconfig = (Get-ChildItem -Path $workDir -Filter "*.exe.config")[0].FullName
 
 $fs = [System.IO.FileStream]::new(
     $fileconfig,
@@ -19,6 +22,9 @@ $fs = [System.IO.FileStream]::new(
     [System.IO.FileAccess]::Read,
     [System.IO.FileShare]::None
 )
+
+Write-Host "EXE started"
+Write-Host "Config locked: $fileconfig"
 
 while (-not $process.HasExited) {
     while (-not $process.StandardOutput.EndOfStream) {
@@ -29,7 +35,10 @@ while (-not $process.HasExited) {
         Write-Host $process.StandardError.ReadLine()
     }
 
-    Start-Sleep -Milliseconds 100
+    Start-Sleep -Milliseconds 50
 }
 
 $process.WaitForExit()
+
+$fs.Dispose()
+$process.Dispose()
