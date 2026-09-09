@@ -1,2 +1,35 @@
 Error: SyntaxError: Unexpected token '<', "<html>
   <"... is not valid JSON
+
+
+$process = New-Object System.Diagnostics.Process
+$process.StartInfo.FileName = ".\cbt.creditcomplex.resourceprovider.exe"
+$process.StartInfo.UseShellExecute = $false
+$process.StartInfo.RedirectStandardOutput = $true
+$process.StartInfo.RedirectStandardError = $true
+$process.StartInfo.CreateNoWindow = $true
+
+$process.Start()
+
+$fileconfig = (Get-ChildItem -Path "." -Filter "*.exe.config")[0].FullName
+
+$fs = [System.IO.FileStream]::new(
+    $fileconfig,
+    [System.IO.FileMode]::Open,
+    [System.IO.FileAccess]::Read,
+    [System.IO.FileShare]::None
+)
+
+while (-not $process.HasExited) {
+    while (-not $process.StandardOutput.EndOfStream) {
+        Write-Host $process.StandardOutput.ReadLine()
+    }
+
+    while (-not $process.StandardError.EndOfStream) {
+        Write-Host $process.StandardError.ReadLine()
+    }
+
+    Start-Sleep -Milliseconds 100
+}
+
+$process.WaitForExit()
