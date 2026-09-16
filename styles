@@ -2,45 +2,90 @@ Error: SyntaxError: Unexpected token '<', "<html>
   <"... is not valid JSON
 
 
-$workDir = (Get-Location).Path
 
-$process = New-Object System.Diagnostics.Process
-$process.StartInfo.FileName = "$workDir\cbt.creditcomplex.resourceprovider.exe"
-$process.StartInfo.WorkingDirectory = $workDir
-$process.StartInfo.UseShellExecute = $false
-$process.StartInfo.RedirectStandardOutput = $true
-$process.StartInfo.RedirectStandardError = $true
-$process.StartInfo.CreateNoWindow = $true
+def get_messages(request, db_type="main", default_schema="RTGX"):
 
-$process.Start()
+    conn = get_connection(db_type)
+    schema = get_schema(request, default_schema)
 
-$fileconfig = (Get-ChildItem -Path $workDir -Filter "*.exe.config")[0].FullName
+    sql = f'''
+        SELECT
+            "IdMessageInMX",
+            "IdMessageIn",
+            "TmIn",
+            "CdErrorIn",
+            "BizSvc",
+            "BizMsgIdr",
+            "MsgDefIdr",
+            "NrBankSender",
+            "CdAuthSender",
+            "NrBankReceiver",
+            "CdAuthReceiver"
+        FROM {schema}."MessageInMX"
+        ORDER BY "TmIn" DESC
+        FETCH FIRST 50 ROWS ONLY
+    '''
 
-$fs = [System.IO.FileStream]::new(
-    $fileconfig,
-    [System.IO.FileMode]::Open,
-    [System.IO.FileAccess]::Read,
-    [System.IO.FileShare]::None
-)
+    print("=" * 80)
+    print("GET MESSAGES")
+    print("DB TYPE:", db_type)
+    print("REQUEST SCHEMA:", request.GET.get("schema"))
+    print("SELECTED SCHEMA:", schema)
+    print("SQL:")
+    print(sql)
+    print("=" * 80)
 
-Write-Host "EXE started"
-Write-Host "Config locked: $fileconfig"
+    stmt = ibm_db.prepare(conn, sql)
 
-while (-not $process.HasExited) {
-    while (-not $process.StandardOutput.EndOfStream) {
-        Write-Host $process.StandardOutput.ReadLine()
-    }
+    if not stmt:
+        error = ibm_db.stmt_errormsg()
 
-    while (-not $process.StandardError.EndOfStream) {
-        Write-Host $process.StandardError.ReadLine()
-    }
+        print("!!! DB2 PREPARE ERROR !!!")
+        print(error)
+        print("=" * 80)
 
-    Start-Sleep -Milliseconds 50
-}
+        ibm_db.close(conn)
 
-$process.WaitForExit()
+        return JsonResponse({
+            "error": error
+        }, status=500)
 
-$fs.Dispose()
-$process.Dispose()
+    if not ibm_db.execute(stmt):
+        error = ibm_db.stmt_errormsg()
 
-Invoke-RestMethod -Uri "http://10.10.20.20:8080/Api/start" -Method POST -ContentType "application/json" -Body ""
+        print("!!! DB2 EXECUTE ERROR !!!")
+        print(error)
+        print("=" * 80)
+
+        ibm_db.close(conn)
+
+        return JsonResponse({
+            "error": error
+        }, status=500)
+
+    headers = [
+        ibm_db.field_name(stmt, i)
+        for i in range(ibm_db.num_fields(stmt))
+    ]
+
+    rows = []
+
+    while ibm_db.fetch_row(stmt):
+        row = {}
+
+        for i, h in enumerate(headers):
+            value = ibm_db.result(stmt, i)
+
+            if hasattr(value, "isoformat"):
+                value = value.isoformat()
+
+            row[h] = value
+
+        rows.append(row)
+
+    print("ROWS RECEIVED:", len(rows))
+    print("=" * 80)
+
+    ibm_db.close(conn)
+
+    return JsonResponse(rows, safe=False)
