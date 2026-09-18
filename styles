@@ -44,5 +44,5 @@ except pymqi.MQMIError as e:
     print(e)
 
 except Exception as e:
-    print("✗ Ошибка Python")
+    print("Ошибка Python")
     print(type(e).__name__, e)
