@@ -1,27 +1,8 @@
-Get-ChildItem "C:\ProgramData\IBM\MQ" -Recurse -File -ErrorAction SilentlyContinue | Select-Object FullName
+mqclient.ini:
 
-FullName
---------
-C:\ProgramData\IBM\MQ\amqclchl.TAB
-C:\ProgramData\IBM\MQ\amqmjpse.txt
-C:\ProgramData\IBM\MQ\mqclient.ini
-C:\ProgramData\IBM\MQ\mqs.ini
-C:\ProgramData\IBM\MQ\service.env
-C:\ProgramData\IBM\MQ\conv\table\ccsid.tbl
-C:\ProgramData\IBM\MQ\conv\table\ccsid_part2.tbl
-C:\ProgramData\IBM\MQ\conv\table\gmqlccs.tbl
-C:\ProgramData\IBM\MQ\errors\AMQERR01.LOG
-C:\ProgramData\IBM\MQ\errors\AMQERR02.LOG
-C:\ProgramData\IBM\MQ\errors\AMQERR03.LOG
-C:\ProgramData\IBM\MQ\exits\Installation1\mqccred.dll
-C:\ProgramData\IBM\MQ\exits\Installation1\symbols\dll\mqccred.pdb
-C:\ProgramData\IBM\MQ\exits64\Installation1\amqrspin.dll
-C:\ProgramData\IBM\MQ\exits64\Installation1\mqccred.dll
-C:\ProgramData\IBM\MQ\exits64\Installation1\symbols\dll\amqrspin.pdb
-C:\ProgramData\IBM\MQ\exits64\Installation1\symbols\dll\mqccred.pdb
-C:\ProgramData\IBM\MQ\shared\4096\mqzsd.dll
-C:\ProgramData\IBM\MQ\shared\4097\mqzsd.dll
-C:\ProgramData\IBM\MQ\sockets\@SYSTEM\qmgrlocl\B4322\1\Trace.shm
-C:\ProgramData\IBM\MQ\web\installations\Installation1\servers\mqweb\jvm.options
-C:\ProgramData\IBM\MQ\web\installations\Installation1\servers\mqweb\mqwebuser.xml
-C:\ProgramData\IBM\MQ\web\installations\Installation1\servers\mqweb\server.xml
+ClientExitPath:
+   ExitsDefaultPath=C:\ProgramData\IBM\MQ\exits
+   ExitsDefaultPath64=C:\ProgramData\IBM\MQ\exits64
+
+SSL:
+   AllowTLSV13=TRUE
