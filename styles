@@ -1,48 +1,9 @@
-$env:MQCHLLIB = "C:\ProgramData\IBM\MQ"
-$env:MQCHLTAB = "amqclchl.TAB"
+PyMQI version: 1.12.11
+Queue Manager: MQM5
+Queue: MX.ABS.TO_BISS.LQ
 
-Get-ChildItem Env:MQ*
-
-Должно появиться:
-MQCHLLIB    C:\ProgramData\IBM\MQ
-MQCHLTAB    amqclchl.TAB
-
-
-
-
-import pymqi
-
-
-QM_NAME = "ТВОЙ_QUEUE_MANAGER"
-QUEUE_NAME = "ТВОЯ_ОЧЕРЕДЬ"
-
-
-print("PyMQI version:", pymqi.__version__)
-print("Queue Manager:", QM_NAME)
-print("Queue:", QUEUE_NAME)
-print()
-print("Подключение к IBM MQ...")
-
-
-try:
-    qmgr = pymqi.connect(QM_NAME)
-
-    print("Queue Manager подключен")
-
-    queue = pymqi.Queue(qmgr, QUEUE_NAME)
-
-    print("Очередь открыта")
-
-    queue.close()
-    qmgr.disconnect()
-
-    print("Соединение закрыто")
-
-except pymqi.MQMIError as e:
-    print("Ошибка IBM MQ")
-    print("Reason code:", e.reason)
-    print(e)
-
-except Exception as e:
-    print("Ошибка Python")
-    print(type(e).__name__, e)
+Подключение к IBM MQ...
+Queue Manager подключен
+Очередь открыта
+Ошибка Python
+PYIFError PYMQI Error: not open
