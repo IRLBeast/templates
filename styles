@@ -1,91 +1,33 @@
-1. Версию IBM MQ Client
-В PowerShell:
-dspmqver
-Если команда не находится, попробуй из:
-"C:\Program Files\IBM\MQ\bin64\dspmqver.exe"
-или:
-"C:\Program Files\IBM\MQ\bin\dspmqver.exe"
-Пришли результат.
-2. Какие MQ-программы установлены
-Выполни:
-Get-ChildItem "C:\Program Files\IBM\MQ\bin64" -ErrorAction SilentlyContinue |
-    Select-Object Name
-и:
-Get-ChildItem "C:\Program Files\IBM\MQ\bin" -ErrorAction SilentlyContinue |
-    Select-Object Name
-Особенно нас интересуют:
-amqsput.exe
-amqsputc.exe
-amqsgetc.exe
-runmqsc.exe
-setmqenv.cmd
-amqsputc особенно интересен — это клиентская программа IBM MQ, которой можно проверить подключение без Python.
-3. Проверить переменные окружения
-В PowerShell:
-Get-ChildItem Env: | Where-Object {
-    $_.Name -like "MQ*" -or
-    $_.Name -like "AMQ*"
-}
-И отдельно:
-$env:MQSERVER
-$env:MQCHLLIB
-$env:MQCHLTAB
-$env:MQCCDTURL
-Если что-то вернётся — пришли значения.
-Особенно важны:
-MQSERVER
-MQCHLLIB
-MQCHLTAB
-MQCCDTURL
-Они могут определить, откуда MQ Client получает настройки подключения.
-4. Проверить наличие CCDT
-Посмотри:
-Get-ChildItem "C:\ProgramData\IBM\MQ" -Recurse -File -ErrorAction SilentlyContinue |
-    Where-Object {
-        $_.Name -like "*.TAB" -or
-        $_.Name -like "*.tab"
-    } |
-    Select-Object FullName
-И:
+python -m pip show pymqi
+Name: pymqi
+Version: 1.12.13
+Summary: The development of this product is currently on hold.
+Home-page: 
+Author: Zato Source s.r.o.
+Author-email: pymqi@zato.io
+License: Python Software Foundation License
+Location: D:\autotest\.venv\Lib\site-packages
+
+
+Get-ChildItem Env:MQ*
+
+Name                           Value
+----                           -----
+MQ_JAVA_DATA_PATH              C:\ProgramData\IBM\MQ
+MQ_FILE_PATH                   C:\Program Files\IBM\MQ
+MQ_JAVA_INSTALL_PATH           C:\Program Files\IBM\MQ\java
+MQ_JRE_PATH                    C:\Program Files\IBM\MQ\java\jre
+
+
+
+
 Get-ChildItem "C:\Program Files\IBM\MQ" -Recurse -File -ErrorAction SilentlyContinue |
     Where-Object {
         $_.Name -like "*.TAB" -or
         $_.Name -like "*.tab"
     } |
     Select-Object FullName
-Нас интересует файл вроде:
-AMQCLCHL.TAB
-Если он есть, не удаляй и не изменяй его.
-5. Проверить MQ Client configuration files
-Посмотри:
-Get-ChildItem "C:\ProgramData\IBM\MQ" -Recurse -File -ErrorAction SilentlyContinue |
-    Select-Object FullName
-Если файлов много, можно сузить:
-Get-ChildItem "C:\ProgramData\IBM\MQ" -Recurse -File -ErrorAction SilentlyContinue |
-    Where-Object {
-        $_.Extension -in ".ini",".conf",".cfg",".tab"
-    } |
-    Select-Object FullName
-6. Проверить сертификаты
-Это особенно важно, потому что на серверном канале у тебя:
-SSLCAUTH(REQUIRED)
-На клиенте выполни:
-Get-ChildItem Cert:\CurrentUser\My |
-    Select-Object Subject, Issuer, Thumbprint, NotAfter
-И для сертификатов компьютера:
-Get-ChildItem Cert:\LocalMachine\My |
-    Select-Object Subject, Issuer, Thumbprint, NotAfter
-Не присылай приватные ключи, если PowerShell их где-то показывает. Нам достаточно Subject, Issuer, Thumbprint, NotAfter.
-7. Проверить MQ SSL/TLS configuration
-Ещё можно посмотреть каталоги IBM MQ:
-Get-ChildItem "C:\ProgramData\IBM\MQ" -Recurse -Directory -ErrorAction SilentlyContinue |
-    Where-Object {
-        $_.FullName -match "ssl|SSL|key"
-    } |
-    Select-Object FullName
-И:
-Get-ChildItem "C:\Program Files\IBM\MQ" -Recurse -Directory -ErrorAction SilentlyContinue |
-    Where-Object {
-        $_.FullName -match "ssl|SSL|key"
-    } |
-    Select-Object FullName
+
+FullName
+--------
+C:\ProgramData\IBM\MQ\amqclchl.TAB
