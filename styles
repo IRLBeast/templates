@@ -1,33 +1,5 @@
-python -m pip show pymqi
-Name: pymqi
-Version: 1.12.13
-Summary: The development of this product is currently on hold.
-Home-page: 
-Author: Zato Source s.r.o.
-Author-email: pymqi@zato.io
-License: Python Software Foundation License
-Location: D:\autotest\.venv\Lib\site-packages
+Get-ChildItem Env: | Where-Object { $_.Name -like "MQ*" } | Format-Table Name, Value
 
 
-Get-ChildItem Env:MQ*
-
-Name                           Value
-----                           -----
-MQ_JAVA_DATA_PATH              C:\ProgramData\IBM\MQ
-MQ_FILE_PATH                   C:\Program Files\IBM\MQ
-MQ_JAVA_INSTALL_PATH           C:\Program Files\IBM\MQ\java
-MQ_JRE_PATH                    C:\Program Files\IBM\MQ\java\jre
-
-
-
-
-Get-ChildItem "C:\Program Files\IBM\MQ" -Recurse -File -ErrorAction SilentlyContinue |
-    Where-Object {
-        $_.Name -like "*.TAB" -or
-        $_.Name -like "*.tab"
-    } |
+Get-ChildItem "C:\ProgramData\IBM\MQ" -Recurse -File -ErrorAction SilentlyContinue |
     Select-Object FullName
-
-FullName
---------
-C:\ProgramData\IBM\MQ\amqclchl.TAB
