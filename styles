@@ -1,8 +1,11 @@
-mqclient.ini:
+[Environment]::GetEnvironmentVariable("MQCHLLIB", "Machine")
+[Environment]::GetEnvironmentVariable("MQCHLTAB", "Machine")
+[Environment]::GetEnvironmentVariable("MQCHLLIB", "User")
+[Environment]::GetEnvironmentVariable("MQCHLTAB", "User")
 
-ClientExitPath:
-   ExitsDefaultPath=C:\ProgramData\IBM\MQ\exits
-   ExitsDefaultPath64=C:\ProgramData\IBM\MQ\exits64
+[Environment]::GetEnvironmentVariable("MQSERVER", "Machine")
+[Environment]::GetEnvironmentVariable("MQSERVER", "User")
 
-SSL:
-   AllowTLSV13=TRUE
+Get-ChildItem "HKLM:\SOFTWARE\IBM\MQ" -Recurse -ErrorAction SilentlyContinue |
+    Select-Object PSPath
+
