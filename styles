@@ -1,3 +1,15 @@
+$env:MQCHLLIB = "C:\ProgramData\IBM\MQ"
+$env:MQCHLTAB = "amqclchl.TAB"
+
+Get-ChildItem Env:MQ*
+
+Должно появиться:
+MQCHLLIB    C:\ProgramData\IBM\MQ
+MQCHLTAB    amqclchl.TAB
+
+
+
+
 import pymqi
 
 
