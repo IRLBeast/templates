@@ -1,11 +1,36 @@
-[Environment]::GetEnvironmentVariable("MQCHLLIB", "Machine")
-[Environment]::GetEnvironmentVariable("MQCHLTAB", "Machine")
-[Environment]::GetEnvironmentVariable("MQCHLLIB", "User")
-[Environment]::GetEnvironmentVariable("MQCHLTAB", "User")
+import pymqi
 
-[Environment]::GetEnvironmentVariable("MQSERVER", "Machine")
-[Environment]::GetEnvironmentVariable("MQSERVER", "User")
 
-Get-ChildItem "HKLM:\SOFTWARE\IBM\MQ" -Recurse -ErrorAction SilentlyContinue |
-    Select-Object PSPath
+QM_NAME = "ТВОЙ_QUEUE_MANAGER"
+QUEUE_NAME = "ТВОЯ_ОЧЕРЕДЬ"
 
+
+print("PyMQI version:", pymqi.__version__)
+print("Queue Manager:", QM_NAME)
+print("Queue:", QUEUE_NAME)
+print()
+print("Подключение к IBM MQ...")
+
+
+try:
+    qmgr = pymqi.connect(QM_NAME)
+
+    print("✓ Queue Manager подключен")
+
+    queue = pymqi.Queue(qmgr, QUEUE_NAME)
+
+    print("✓ Очередь открыта")
+
+    queue.close()
+    qmgr.disconnect()
+
+    print("✓ Соединение закрыто")
+
+except pymqi.MQMIError as e:
+    print("✗ Ошибка IBM MQ")
+    print("Reason code:", e.reason)
+    print(e)
+
+except Exception as e:
+    print("✗ Ошибка Python")
+    print(type(e).__name__, e)
