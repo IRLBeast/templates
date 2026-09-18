@@ -27,19 +27,19 @@ print("Подключение к IBM MQ...")
 try:
     qmgr = pymqi.connect(QM_NAME)
 
-    print("✓ Queue Manager подключен")
+    print("Queue Manager подключен")
 
     queue = pymqi.Queue(qmgr, QUEUE_NAME)
 
-    print("✓ Очередь открыта")
+    print("Очередь открыта")
 
     queue.close()
     qmgr.disconnect()
 
-    print("✓ Соединение закрыто")
+    print("Соединение закрыто")
 
 except pymqi.MQMIError as e:
-    print("✗ Ошибка IBM MQ")
+    print("Ошибка IBM MQ")
     print("Reason code:", e.reason)
     print(e)
 
