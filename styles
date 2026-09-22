@@ -1,51 +1,6 @@
-from pathlib import Path
-
-import pymqi
-
-
-QM_NAME = "MQM5"
-QUEUE_NAME = "MX.ABS.TO_BISS.LQ"
-
-# Укажи здесь путь к своему проверенному XML
-XML_FILE = Path(r"D:\путь\к\message.xml")
-
-
-print("PyMQI version:", pymqi.__version__)
-print("Queue Manager:", QM_NAME)
-print("Queue:", QUEUE_NAME)
-print("XML:", XML_FILE)
-print()
-
-
-try:
-    # 1. Читаем XML именно как UTF-8
-    xml = XML_FILE.read_text(encoding="utf-8")
-
-    print(f"XML прочитан: {len(xml)} символов")
-    print("Подключение к IBM MQ...")
-
-    # 2. Подключаемся
-    qmgr = pymqi.connect(QM_NAME)
-
-    print("Queue Manager подключен")
-
-    # 3. Открываем очередь
-    queue = pymqi.Queue(qmgr, QUEUE_NAME)
-
-    print("Очередь открыта")
-
-    # 4. Отправляем XML
-    print("Отправляем XML...")
-
-    queue.put(xml.encode("utf-8"))
-
-    print("XML успешно отправлен!")
-
-except pymqi.MQMIError as e:
-    print("Ошибка IBM MQ")
-    print("Reason code:", e.reason)
-    print(e)
-
-except Exception as e:
-    print("Ошибка Python")
-    print(type(e).__name__, e)
+<BizMsgIdr>345ABSB20230120203422PACS0913ERIP85</BizMsgIdr>
+<CreDt>2026-08-06T10:12:14+03:00</CreDt>
+<MsgId>345ABSB20230120203422PACS0913ERIP85</MsgId>
+<CreDtTm>2026-08-06T10:12:14+03:00</CreDtTm>
+<IntrBkSttlmDt>2026-08-06</IntrBkSttlmDt>
+<InstrId>345ABSB20230120203422PACS0913ERIP79</InstrId>
