@@ -1,84 +1,45 @@
-import os
-
-os.environ["MQCHLLIB"] = r"C:\ProgramData\IBM\MQ"
-os.environ["MQCHLTAB"] = "amqclchl.TAB"
-
-
+import re
 from datetime import datetime
-import xml.etree.ElementTree as ET
 
 
 def update_xml_dates(xml_text: str) -> str:
-    """
-    Обновляет даты и идентификаторы в XML перед отправкой.
-
-    Изменяет:
-        BizMsgIdr  — заменяет первые 8 цифр даты внутри ID
-        MsgId      — заменяет первые 8 цифр даты внутри ID
-        InstrId    — заменяет первые 8 цифр даты внутри ID
-        CreDt      — текущая дата и время
-        CreDtTm    — текущая дата и время
-        IntrBkSttlmDt — текущая дата
-    """
-
     now = datetime.now()
 
     current_date = now.strftime("%Y%m%d")
     current_datetime = now.strftime("%Y-%m-%dT%H:%M:%S+03:00")
+    current_date_iso = now.strftime("%Y-%m-%d")
 
-    root = ET.fromstring(xml_text)
+    # BizMsgIdr, MsgId, InstrId
+    # Заменяем только дату внутри идентификатора.
+    for tag_name in ("BizMsgIdr", "MsgId", "InstrId"):
+        pattern = rf"(<(?:\w+:)?{tag_name}>\s*[^<]{{7}})\d{{8}}([^<]*</(?:\w+:)?{tag_name}>)"
 
-    # Теги, внутри которых дата находится как часть идентификатора.
-    id_tags = {
-        "BizMsgIdr",
-        "MsgId",
-        "InstrId",
-    }
+        xml_text = re.sub(
+            pattern,
+            rf"\g<1>{current_date}\g<2>",
+            xml_text,
+            count=0
+        )
 
-    for element in root.iter():
-        tag_name = element.tag.split("}")[-1]
-
-        if tag_name in id_tags and element.text:
-            # В твоих ID дата находится после первых 7 символов:
-            #
-            # 345ABSB20230120...
-            #       ^^^^^^^^
-            #
-            # Поэтому сохраняем всё до даты и всё после даты.
-            value = element.text
-
-            if len(value) >= 15:
-                element.text = value[:7] + current_date + value[15:]
-
-        elif tag_name in {"CreDt", "CreDtTm"}:
-            element.text = current_datetime
-
-        elif tag_name == "IntrBkSttlmDt":
-            element.text = now.strftime("%Y-%m-%d")
-
-    return ET.tostring(
-        root,
-        encoding="unicode"
+    # CreDt
+    xml_text = re.sub(
+        r"(<(?:\w+:)?CreDt>)[^<]*(</(?:\w+:)?CreDt>)",
+        rf"\g<1>{current_datetime}\g<2>",
+        xml_text
     )
 
+    # CreDtTm
+    xml_text = re.sub(
+        r"(<(?:\w+:)?CreDtTm>)[^<]*(</(?:\w+:)?CreDtTm>)",
+        rf"\g<1>{current_datetime}\g<2>",
+        xml_text
+    )
 
+    # IntrBkSttlmDt
+    xml_text = re.sub(
+        r"(<(?:\w+:)?IntrBkSttlmDt>)[^<]*(</(?:\w+:)?IntrBkSttlmDt>)",
+        rf"\g<1>{current_date_iso}\g<2>",
+        xml_text
+    )
 
-
-
-value[:7] + current_date + value[15:]
-
-
-
-from pathlib import Path
-
-from xml_processor import update_xml_dates
-
-
-XML_FILE = Path(r"D:\путь\к\твоему\message.xml")
-
-
-xml = XML_FILE.read_text(encoding="utf-8")
-
-updated_xml = update_xml_dates(xml)
-
-print(updated_xml)
+    return xml_text
