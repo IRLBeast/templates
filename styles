@@ -1,41 +1,97 @@
 import re
+import secrets
 from datetime import datetime
+
+
+def generate_message_id(prefix: str = "345ABSB") -> str:
+    """
+    Генерирует уникальную часть идентификатора:
+
+    YYYYMMDD + 16 цифр
+
+    16 цифр состоят из текущего времени
+    и случайной части.
+    """
+
+    now = datetime.now()
+
+    current_date = now.strftime("%Y%m%d")
+    current_time = now.strftime("%H%M%S%f")  # 12 цифр
+
+    random_part = f"{secrets.randbelow(10000):04d}"  # 4 цифры
+
+    unique_part = current_time + random_part
+
+    return prefix + current_date + unique_part
+
+
+
 
 
 def update_xml_dates(xml_text: str) -> str:
     now = datetime.now()
 
-    current_date = now.strftime("%Y%m%d")
     current_datetime = now.strftime("%Y-%m-%dT%H:%M:%S+03:00")
     current_date_iso = now.strftime("%Y-%m-%d")
 
+    # Получаем исходный BizMsgIdr,
+    # чтобы сохранить его префикс.
+    match = re.search(
+        r"<(?:\w+:)?BizMsgIdr>\s*([^<]+)\s*</(?:\w+:)?BizMsgIdr>",
+        xml_text
+    )
+
+    if not match:
+        raise ValueError("Тег BizMsgIdr не найден")
+
+    original_id = match.group(1).strip()
+
+    # В твоём формате первые 7 символов — постоянный префикс.
+    prefix = original_id[:7]
+
+    # Один ID генерируется для всего сообщения.
+    message_id = generate_message_id(prefix)
+
+    # ---------------------------------------------------------
     # BizMsgIdr, MsgId, InstrId
-    # Заменяем только дату внутри идентификатора.
+    # ---------------------------------------------------------
+
     for tag_name in ("BizMsgIdr", "MsgId", "InstrId"):
-        pattern = rf"(<(?:\w+:)?{tag_name}>\s*[^<]{{7}})\d{{8}}([^<]*</(?:\w+:)?{tag_name}>)"
+        pattern = (
+            rf"(<(?:\w+:)?{tag_name}>)[^<]*"
+            rf"(</(?:\w+:)?{tag_name}>)"
+        )
 
         xml_text = re.sub(
             pattern,
-            rf"\g<1>{current_date}\g<2>",
-            xml_text,
-            count=0
+            rf"\g<1>{message_id}\g<2>",
+            xml_text
         )
 
+    # ---------------------------------------------------------
     # CreDt
+    # ---------------------------------------------------------
+
     xml_text = re.sub(
         r"(<(?:\w+:)?CreDt>)[^<]*(</(?:\w+:)?CreDt>)",
         rf"\g<1>{current_datetime}\g<2>",
         xml_text
     )
 
+    # ---------------------------------------------------------
     # CreDtTm
+    # ---------------------------------------------------------
+
     xml_text = re.sub(
         r"(<(?:\w+:)?CreDtTm>)[^<]*(</(?:\w+:)?CreDtTm>)",
         rf"\g<1>{current_datetime}\g<2>",
         xml_text
     )
 
+    # ---------------------------------------------------------
     # IntrBkSttlmDt
+    # ---------------------------------------------------------
+
     xml_text = re.sub(
         r"(<(?:\w+:)?IntrBkSttlmDt>)[^<]*(</(?:\w+:)?IntrBkSttlmDt>)",
         rf"\g<1>{current_date_iso}\g<2>",
@@ -43,3 +99,9 @@ def update_xml_dates(xml_text: str) -> str:
     )
 
     return xml_text
+
+
+
+
+def prepare_xml(xml_text: str) -> str:
+    ...
