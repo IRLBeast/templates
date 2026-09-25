@@ -6,74 +6,45 @@ def generate_message_id(
     original_id: str,
     message_type: str,
     counter: int,
-    timestamp: datetime | None = None,
+    timestamp: datetime | None = None
 ) -> str:
     """
-    Генерирует ID по логике старого bips.exe.
+    Генерация ID по алгоритму старого bips.exe:
 
-    Формат:
-
-        первые 7 символов исходного ID
-        + YYYYMMDDHHMMSS
-        + тип ID
-        + счетчик из 7 цифр
-
-    Например:
-
-        ABC123420260925104200MP80000000
+    первые 7 символов исходного ID
+    + YYYYMMDDHHMMSS
+    + тип ID (MP8 / IP8 / TP8)
+    + счетчик из 7 цифр
     """
-
-    if len(original_id) < 7:
-        raise ValueError(
-            f"Исходный ID должен содержать минимум 7 символов: {original_id!r}"
-        )
-
-    if len(message_type) != 3:
-        raise ValueError(
-            f"Тип ID должен содержать 3 символа: {message_type!r}"
-        )
-
-    if counter < 0:
-        raise ValueError("Счетчик не может быть отрицательным")
 
     if timestamp is None:
         timestamp = datetime.now()
 
     prefix = original_id[:7]
-    current_datetime = timestamp.strftime("%Y%m%d%H%M%S")
-    counter_text = f"{counter:07d}"
+    timestamp_part = timestamp.strftime("%Y%m%d%H%M%S")
+    counter_part = f"{counter:07d}"
 
-    return (
-        prefix
-        + current_datetime
-        + message_type
-        + counter_text
-    )
+    return f"{prefix}{timestamp_part}{message_type}{counter_part}"
 
 
-def get_tag_value(xml_text: str, tag_name: str) -> str | None:
+def get_tag_value(xml_text: str, tag_name: str) -> str:
     """
     Получает значение первого XML-тега.
-
-    Поддерживает как:
-
-        <MsgId>...</MsgId>
-
-    так и namespace prefix:
-
-        <ns:MsgId>...</ns:MsgId>
+    Поддерживает namespace, например:
+    <MsgId>
+    <ns:MsgId>
     """
 
     pattern = (
         rf"<(?:\w+:)?{tag_name}>"
-        rf"\s*([^<]*)\s*"
+        rf"\s*([^<]+?)\s*"
         rf"</(?:\w+:)?{tag_name}>"
     )
 
     match = re.search(pattern, xml_text)
 
     if not match:
-        return None
+        raise ValueError(f"Тег <{tag_name}> не найден")
 
     return match.group(1).strip()
 
@@ -81,22 +52,15 @@ def get_tag_value(xml_text: str, tag_name: str) -> str | None:
 def replace_tag_value(
     xml_text: str,
     tag_name: str,
-    new_value: str,
+    new_value: str
 ) -> str:
     """
-    Заменяет содержимое всех найденных тегов tag_name.
-
-    Например:
-
-        <MsgId>OLD</MsgId>
-
-    превращается в:
-
-        <MsgId>NEW</MsgId>
+    Заменяет содержимое всех тегов с указанным именем.
     """
 
     pattern = (
-        rf"(<(?:\w+:)?{tag_name}>)[^<]*"
+        rf"(<(?:\w+:)?{tag_name}>)"
+        rf"[^<]*"
         rf"(</(?:\w+:)?{tag_name}>)"
     )
 
@@ -107,155 +71,199 @@ def replace_tag_value(
             + new_value
             + match.group(2)
         ),
-        xml_text,
+        xml_text
     )
+
+
+def prepare_dates(xml_text: str, now: datetime) -> str:
+    """
+    Меняет даты/время на текущие.
+
+    CreDt              -> YYYY-MM-DD
+    CreDtTm            -> YYYY-MM-DDTHH:MM:SS+03:00
+    IntrBkSttlmDt      -> YYYY-MM-DD
+    AccptncDtTm        -> YYYY-MM-DDTHH:MM:SS+03:00
+    RltdDt             -> YYYY-MM-DD
+    """
+
+    current_date = now.strftime("%Y-%m-%d")
+    current_datetime = now.strftime("%Y-%m-%dT%H:%M:%S+03:00")
+
+    # Дата
+    for tag_name in (
+        "CreDt",
+        "IntrBkSttlmDt",
+        "RltdDt",
+    ):
+        # Меняем только если тег действительно есть
+        pattern = (
+            rf"<(?:\w+:)?{tag_name}>"
+            rf"\s*[^<]*"
+            rf"</(?:\w+:)?{tag_name}>"
+        )
+
+        if re.search(pattern, xml_text):
+            xml_text = replace_tag_value(
+                xml_text,
+                tag_name,
+                current_date
+            )
+
+    # Дата + время
+    for tag_name in (
+        "CreDtTm",
+        "AccptncDtTm",
+    ):
+        pattern = (
+            rf"<(?:\w+:)?{tag_name}>"
+            rf"\s*[^<]*"
+            rf"</(?:\w+:)?{tag_name}>"
+        )
+
+        if re.search(pattern, xml_text):
+            xml_text = replace_tag_value(
+                xml_text,
+                tag_name,
+                current_datetime
+            )
+
+    return xml_text
 
 
 def prepare_pacs008(
     xml_text: str,
     counter: int = 0,
-    timestamp: datetime | None = None,
-) -> tuple[str, dict[str, str]]:
+    timestamp: datetime | None = None
+):
     """
-    Подготавливает один pacs.008 по логике старого bips.exe.
+    Подготавливает один pacs.008.
 
-    Меняет:
-
-        MsgId
-        InstrId
-        TxId (если присутствует)
-
-    Возвращает:
-
-        (измененный XML, словарь созданных ID)
+    Делает:
+    1. Генерацию MsgId
+    2. Генерацию InstrId
+    3. Генерацию TxId
+    4. Обновление дат/времени
     """
 
     if timestamp is None:
         timestamp = datetime.now()
 
-    # Старый bips.exe брал исходный MsgId.
-    original_msg_id = get_tag_value(xml_text, "MsgId")
-
-    if not original_msg_id:
-        raise ValueError("Тег MsgId не найден")
-
-    # В старом приложении первые 7 символов
-    # исходного MsgId становятся префиксом.
-    prefix = original_msg_id[:7]
-
     # ---------------------------------------------------------
-    # MsgId
+    # 1. MsgId
     # ---------------------------------------------------------
+
+    original_msg_id = get_tag_value(
+        xml_text,
+        "MsgId"
+    )
 
     msg_id = generate_message_id(
-        original_id=original_msg_id,
-        message_type="MP8",
-        counter=counter,
-        timestamp=timestamp,
+        original_msg_id,
+        "MP8",
+        counter,
+        timestamp
     )
 
     xml_text = replace_tag_value(
         xml_text,
         "MsgId",
-        msg_id,
+        msg_id
     )
 
     # ---------------------------------------------------------
-    # InstrId
+    # 2. InstrId
     # ---------------------------------------------------------
 
     original_instr_id = get_tag_value(
         xml_text,
-        "InstrId",
+        "InstrId"
     )
 
-    instr_id = None
+    instr_id = generate_message_id(
+        original_instr_id,
+        "IP8",
+        counter,
+        timestamp
+    )
 
-    if original_instr_id is not None:
-        instr_id = generate_message_id(
-            original_id=original_instr_id,
-            message_type="IP8",
-            counter=counter,
-            timestamp=timestamp,
-        )
-
-        xml_text = replace_tag_value(
-            xml_text,
-            "InstrId",
-            instr_id,
-        )
-
-    # ---------------------------------------------------------
-    # TxId
-    # ---------------------------------------------------------
-
-    original_tx_id = get_tag_value(
+    xml_text = replace_tag_value(
         xml_text,
-        "TxId",
+        "InstrId",
+        instr_id
     )
+
+    # ---------------------------------------------------------
+    # 3. TxId
+    # ---------------------------------------------------------
 
     tx_id = None
 
-    if original_tx_id is not None:
+    try:
+        original_tx_id = get_tag_value(
+            xml_text,
+            "TxId"
+        )
+
         tx_id = generate_message_id(
-            original_id=original_tx_id,
-            message_type="TP8",
-            counter=counter,
-            timestamp=timestamp,
+            original_tx_id,
+            "TP8",
+            counter,
+            timestamp
         )
 
         xml_text = replace_tag_value(
             xml_text,
             "TxId",
-            tx_id,
+            tx_id
         )
 
-    # Возвращаем также созданные ID.
+    except ValueError:
+        # В старом коде TxId был необязательным
+        pass
+
+    # ---------------------------------------------------------
+    # 4. Даты
+    # ---------------------------------------------------------
+
+    xml_text = prepare_dates(
+        xml_text,
+        timestamp
+    )
+
+    # ---------------------------------------------------------
+    # Результат
+    # ---------------------------------------------------------
+
     ids = {
         "MsgId": msg_id,
+        "InstrId": instr_id,
+        "TxId": tx_id,
     }
-
-    if instr_id is not None:
-        ids["InstrId"] = instr_id
-
-    if tx_id is not None:
-        ids["TxId"] = tx_id
 
     return xml_text, ids
 
 
 def prepare_pacs008_messages(
     xml_text: str,
-    number_of_messages: int,
-) -> list[tuple[str, dict[str, str]]]:
+    number_of_messages: int
+):
     """
-    Создает несколько pacs.008.
+    Генерирует несколько pacs.008.
 
-    Счетчик начинается с 0, как в старом bips.exe:
-
-        0000000
-        0000001
-        0000002
+    Аналог старого:
+        num = 0
         ...
+        num++
 
+    Для каждого сообщения увеличивается counter.
     """
-
-    if number_of_messages <= 0:
-        raise ValueError(
-            "Количество сообщений должно быть больше 0"
-        )
 
     messages = []
 
     for counter in range(number_of_messages):
-        # В старом C# DateTime.Now вызывается внутри цикла,
-        # поэтому для каждого сообщения берем текущее время.
-        timestamp = datetime.now()
-
         prepared_xml, ids = prepare_pacs008(
-            xml_text=xml_text,
-            counter=counter,
-            timestamp=timestamp,
+            xml_text,
+            counter=counter
         )
 
         messages.append(
@@ -263,14 +271,16 @@ def prepare_pacs008_messages(
         )
 
     return messages
+```
 
+Теперь тестовый файл:
 
+### `test_smp_file_send.py`
 
-
-
+```python
 from pathlib import Path
 
-from smp_file_send import prepare_pacs008_messages
+from smp_file_send import prepare_pacs008
 
 
 XML_FILE = Path(
@@ -278,26 +288,65 @@ XML_FILE = Path(
 )
 
 
+# ---------------------------------------------------------
+# Читаем исходный XML
+# ---------------------------------------------------------
+
 xml = XML_FILE.read_text(
     encoding="utf-8"
 )
 
 
-messages = prepare_pacs008_messages(
-    xml_text=xml,
-    number_of_messages=1,
+# ---------------------------------------------------------
+# Подготавливаем сообщение
+# ---------------------------------------------------------
+
+updated_xml, ids = prepare_pacs008(
+    xml,
+    counter=0
 )
 
 
-for index, (updated_xml, ids) in enumerate(messages):
-    print("=" * 80)
-    print(f"Сообщение №{index + 1}")
-    print("=" * 80)
+# ---------------------------------------------------------
+# Выводим сгенерированные ID
+# ---------------------------------------------------------
 
-    print("\nСозданные ID:")
+print("=" * 80)
+print("СГЕНЕРИРОВАННЫЕ ID")
+print("=" * 80)
 
-    for tag_name, value in ids.items():
-        print(f"{tag_name}: {value}")
+print("MsgId:   ", ids["MsgId"])
+print("InstrId: ", ids["InstrId"])
+print("TxId:    ", ids["TxId"])
 
-    print("\nXML:")
-    print(updated_xml)
+
+# ---------------------------------------------------------
+# Выводим результат
+# ---------------------------------------------------------
+
+print()
+print("=" * 80)
+print("ИЗМЕНЕННЫЙ XML")
+print("=" * 80)
+
+print(updated_xml)
+
+
+# ---------------------------------------------------------
+# Дополнительно сохраняем результат в файл
+# ---------------------------------------------------------
+
+output_file = XML_FILE.with_name(
+    XML_FILE.stem + "_prepared.xml"
+)
+
+output_file.write_text(
+    updated_xml,
+    encoding="utf-8"
+)
+
+print()
+print("=" * 80)
+print(f"Результат сохранен:")
+print(output_file)
+print("=" * 80)
