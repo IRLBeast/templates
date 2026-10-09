@@ -1,101 +1,37 @@
-def generate_message_id(
-    original_id: str,
-    message_type: str,
-    counter: int,
-    timestamp: datetime | None = None
-) -> str:
-    """
-    Генерация ID.
-
-    Для MsgId / InstrId:
-
-        prefix + YYYYMMDDHHMMSS + MP8/IP8 + 7 цифр
-
-    Для TxId:
-
-        prefix + YYYYMMDDHHMMSS + TP8 + номер + 6 цифр
-    """
-
-    if timestamp is None:
-        timestamp = datetime.now()
-
-    prefix = original_id[:7]
-    timestamp_part = timestamp.strftime("%Y%m%d%H%M%S")
-
-    if message_type == "TP8":
-        # Например:
-        # TP80000000
-        # TP81000000
-        # TP82000000
-        counter_part = f"{counter}000000"
-    else:
-        # Например:
-        # MP80000000
-        # IP80000000
-        # MP80000001
-        counter_part = f"{counter:07d}"
-
-    return (
-        f"{prefix}"
-        f"{timestamp_part}"
-        f"{message_type}"
-        f"{counter_part}"
-    )
+import os
+from pathlib import Path
+import pymqi
 
 
+os.environ["MQCHLLIB"] = r"C:\Program Files\IBM\MQ"
+os.environ["MQCHLTAB"] = "amqclchl.TAB"
+
+QM_NAME = "MQ10"
+QUEUE_NAME = "MX.IPSSRV01.FROM_PAY.LQ"
+
+XML_FILE = Path(r"D:\autotest\docs\Z00_emul_prepared.xml")
 
 
-def replace_tx_ids(
-    xml_text: str,
-    timestamp: datetime
-) -> tuple[str, list[str]]:
-    """
-    Обрабатывает все TxId.
+def send_xml():
+    xml = XML_FILE.read_text(encoding="utf-8")
 
-    Первое вхождение:
-        TP80000000
+    try:
+        qmgr = pymqi.connect(QM_NAME)
 
-    Второе:
-        TP81000000
+        queue = pymqi.Queue(qmgr, QUEUE_NAME)
 
-    Третье:
-        TP82000000
-    """
+        queue.put(xml.encode("utf-8"))
 
-    counter = 0
-    generated_ids = []
+        print("XML успешно отправлен!")
 
-    pattern = re.compile(
-        rf"(<(?:\w+:)?TxId>)"
-        rf"([^<]*)"
-        rf"(</(?:\w+:)?TxId>)"
-    )
+    except pymqi.MQMIError as e:
+        print("Ошибка IBM MQ")
+        print("Reason code:", e.reason)
+        print(e)
 
-    def replace(match):
-        nonlocal counter
+    except Exception as e:
+        print("Ошибка Python")
+        print(type(e).__name__, e)
 
-        original_id = match.group(2).strip()
-
-        new_id = generate_message_id(
-            original_id=original_id,
-            message_type="TP8",
-            counter=counter,
-            timestamp=timestamp
-        )
-
-        generated_ids.append(new_id)
-
-        counter += 1
-
-        return (
-            match.group(1)
-            + new_id
-            + match.group(3)
-        )
-
-    xml_text = pattern.sub(
-        replace,
-        xml_text
-    )
-
-    return xml_text, generated_ids
+if __name__ == "__main__":
+    send_xml()
