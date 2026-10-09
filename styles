@@ -1,287 +1,110 @@
-import os
+def get_optional_tag_value(
+    xml_text: str,
+    tag_name: str
+) -> str | None:
+    pattern = (
+        rf"<(?:\w+:)?{tag_name}>"
+        rf"\s*([^<]*?)\s*"
+        rf"</(?:\w+:)?{tag_name}>"
+    )
 
-import pymqi
+    match = re.search(pattern, xml_text)
+
+    if not match:
+        return None
+
+    return match.group(1).strip()
 
 
-# Настройки IBM MQ
-os.environ["MQCHLLIB"] = r"C:\ProgramData\IBM\MQ"
-os.environ["MQCHLTAB"] = "amqclchl.TAB"
-
-QM_NAME = "MQ10"
-QUEUE_NAME = "MX.IPSSRV01.FROM_PAY.LQ"
 
 
-def send_xml_messages(messages: list[str]) -> list[dict]:
+
+def prepare_pacs008(
+    xml_text: str,
+    counter: int = 0,
+    timestamp: datetime | None = None
+):
     """
-    Отправляет несколько XML-сообщений в одну очередь.
+    Подготавливает XML.
 
-    messages — список XML-строк.
-
-    Возвращает результат для каждого сообщения.
+    Отсутствующие ID-теги пропускаются.
+    Все найденные TxId обрабатываются отдельно.
+    Присутствующие даты обновляются.
     """
 
-    results = []
-
-    qmgr = None
-    queue = None
-
-    try:
-        qmgr = pymqi.connect(QM_NAME)
-        queue = pymqi.Queue(qmgr, QUEUE_NAME)
-
-        for index, xml in enumerate(messages, start=1):
-            try:
-                queue.put(xml.encode("utf-8"))
-
-                results.append({
-                    "index": index,
-                    "success": True,
-                    "error": "",
-                })
-
-            except Exception as exc:
-                results.append({
-                    "index": index,
-                    "success": False,
-                    "error": f"{type(exc).__name__}: {exc}",
-                })
-
-    except Exception as exc:
-        error = f"{type(exc).__name__}: {exc}"
-
-        # Если подключение или открытие очереди не удалось,
-        # сообщения не были отправлены.
-        for index in range(len(results) + 1, len(messages) + 1):
-            results.append({
-                "index": index,
-                "success": False,
-                "error": error,
-            })
-
-    finally:
-        if queue is not None:
-            try:
-                queue.close()
-            except Exception:
-                pass
-
-        if qmgr is not None:
-            try:
-                qmgr.disconnect()
-            except Exception:
-                pass
-
-    return results
-
-
-
-
-
-from pathlib import Path
-from uuid import uuid4
-
-from django.conf import settings
-from django.shortcuts import render
-
-from .smp_file_send import prepare_pacs008
-from .mq_sender import send_xml_messages
-
-
-def smp_sender(request):
-    results = []
-
-    if request.method == "POST":
-        uploaded_files = request.FILES.getlist("xml_files")
-
-        if not uploaded_files:
-            return render(request, "smp/smp_sender.html", {
-                "error": "Выберите хотя бы один XML-файл.",
-                "results": [],
-            })
-
-        prepared_messages = []
-        output_dir = Path(settings.MEDIA_ROOT) / "prepared_smp"
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        # Сначала подготавливаем все файлы.
-        for index, uploaded_file in enumerate(uploaded_files):
-            try:
-                xml_text = uploaded_file.read().decode("utf-8-sig")
-
-                # counter уникален для каждого файла в этой пачке.
-                prepared_xml, ids = prepare_pacs008(
-                    xml_text,
-                    counter=index,
-                )
-
-                # Создаем уникальное имя, чтобы файлы
-                # с одинаковыми названиями не перезаписывались.
-                original_name = Path(uploaded_file.name).stem
-                output_name = (
-                    f"{original_name}_{uuid4().hex[:8]}_prepared.xml"
-                )
-                output_path = output_dir / output_name
-
-                output_path.write_text(
-                    prepared_xml,
-                    encoding="utf-8",
-                )
-
-                prepared_messages.append({
-                    "filename": uploaded_file.name,
-                    "prepared_xml": prepared_xml,
-                    "output_name": output_name,
-                    "ids": ids,
-                })
-
-            except Exception as exc:
-                results.append({
-                    "filename": uploaded_file.name,
-                    "success": False,
-                    "error": (
-                        f"Ошибка подготовки: "
-                        f"{type(exc).__name__}: {exc}"
-                    ),
-                    "ids": None,
-                })
-
-        # Отправляем только успешно подготовленные XML.
-        if prepared_messages:
-            send_results = send_xml_messages([
-                item["prepared_xml"]
-                for item in prepared_messages
-            ])
-
-            for item, send_result in zip(
-                prepared_messages,
-                send_results,
-            ):
-                results.append({
-                    "filename": item["filename"],
-                    "success": send_result["success"],
-                    "error": send_result["error"],
-                    "ids": item["ids"],
-                    "output_name": item["output_name"],
-                })
-
-    return render(request, "smp/smp_sender.html", {
-        "results": results,
-    })
-
-
-
-
-
-
-
-from django.urls import include, path
-
-urlpatterns = [
-    path("smp/", include("smp.urls")),
-]
-
-
-
-
-
-
-
-Отправка SMP-сообщений
-
-{% if error %}
-Ошибка: {{ error }}
-{% endif %}
-
-<form method="post" enctype="multipart/form-data">
-    {% csrf_token %}<p>
-    <label for="xml_files">Выберите XML-файлы:</label>
-</p>
-
-<input
-    type="file"
-    id="xml_files"
-    name="xml_files"
-    accept=".xml,text/xml,application/xml"
-    multiple
-    required
->
-
-<p>
-    <button type="submit">Подготовить и отправить</button>
-</p>
-
-</form>{% if results %}
-
-Результаты обработки
-
-<table>
-    <thead>
-        <tr>
-            <th>Файл</th>
-            <th>Статус</th>
-            <th>MsgId</th>
-            <th>InstrId</th>
-            <th>TxId</th>
-            <th>Подготовленный файл</th>
-            <th>Ошибка</th>
-        </tr>
-    </thead><tbody>
-    {% for item in results %}
-    <tr>
-        <td>{{ item.filename }}</td>
-
-        <td>
-            {% if item.success %}
-                Отправлено
-            {% else %}
-                Ошибка
-            {% endif %}
-        </td>
-
-        <td>
-            {% if item.ids %}
-                {{ item.ids.MsgId }}
-            {% endif %}
-        </td>
-
-        <td>
-            {% if item.ids %}
-                {{ item.ids.InstrId }}
-            {% endif %}
-        </td>
-
-        <td>
-            {% if item.ids %}
-                {% for tx_id in item.ids.TxId %}
-                    {{ tx_id }}<br>
-                {% empty %}
-                    Нет TxId
-                {% endfor %}
-            {% endif %}
-        </td>
-
-        <td>
-            {% if item.output_name %}
-                {{ item.output_name }}
-            {% endif %}
-        </td>
-
-        <td>{{ item.error }}</td>
-    </tr>
-    {% endfor %}
-</tbody>
-
-</table>
-{% endif %}
-
-
-
-
-
-В settings.py добавь настройки, если их ещё нет:
-from pathlib import Path
-
-MEDIA_ROOT = BASE_DIR / "media"
-MEDIA_URL = "/media/"
-
-Подготовленные файлы будут сохраняться в папку media/prepared_smp/. Для первого теста этого достаточно; позднее можно добавить удаление старых файлов и возможность скачать подготовленный XML из интерфейса.
+    if timestamp is None:
+        timestamp = datetime.now()
+
+    ids = {
+        "MsgId": None,
+        "InstrId": None,
+        "TxId": [],
+    }
+
+    # ---------------------------------------------------------
+    # MsgId — обрабатываем, только если тег существует
+    # ---------------------------------------------------------
+
+    original_msg_id = get_optional_tag_value(
+        xml_text,
+        "MsgId"
+    )
+
+    if original_msg_id is not None:
+        ids["MsgId"] = generate_message_id(
+            original_msg_id,
+            "MP8",
+            counter,
+            timestamp
+        )
+
+        xml_text = replace_tag_value(
+            xml_text,
+            "MsgId",
+            ids["MsgId"]
+        )
+
+    # ---------------------------------------------------------
+    # InstrId — обрабатываем, только если тег существует
+    # ---------------------------------------------------------
+
+    original_instr_id = get_optional_tag_value(
+        xml_text,
+        "InstrId"
+    )
+
+    if original_instr_id is not None:
+        ids["InstrId"] = generate_message_id(
+            original_instr_id,
+            "IP8",
+            counter,
+            timestamp
+        )
+
+        xml_text = replace_tag_value(
+            xml_text,
+            "InstrId",
+            ids["InstrId"]
+        )
+
+    # ---------------------------------------------------------
+    # TxId — обрабатываем все вхождения, если они есть
+    # ---------------------------------------------------------
+
+    xml_text, tx_ids = replace_tx_ids(
+        xml_text,
+        timestamp
+    )
+
+    ids["TxId"] = tx_ids
+
+    # ---------------------------------------------------------
+    # Даты — обновляются только при наличии тегов
+    # ---------------------------------------------------------
+
+    xml_text = prepare_dates(
+        xml_text,
+        timestamp
+    )
+
+    return xml_text, ids
