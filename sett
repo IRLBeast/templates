@@ -1,0 +1,99 @@
+Подготовка второго Django-приложения
+Создайте директорию для нового проекта (если ее еще нет) и разверните там код:
+   mkdir -p /home/stendadm@rc.nbrb.by/project2_prod
+   # Скопируйте или клонируйте сюда код вашего второго проекта
+   Создайте виртуальное окружение и установите зависимости:
+      python3 -m venv /home/stendadm@rc.nbrb.by/project2_prod/venv
+   source /home/stendadm@rc.nbrb.by/project2_prod/venv/bin/activate
+   pip install -r requirements.txt  # или ваш способ установки зависимостей
+   Настройте базу данных, выполните миграции и соберите статику:
+      python manage.py migrate
+   python manage.py collectstatic
+   Создайте папку для логов Gunicorn:
+      mkdir -p /home/stendadm@rc.nbrb.by/project2_prod/logs_gun
+     Настройка Gunicorn для второго приложения
+Создайте новый systemd-файл, например, /etc/systemd/system/gunicorn_project2.service:
+sudo nano /etc/systemd/system/gunicorn_project2.service
+Вставьте туда следующий конфиг (обратите внимание на комментарии, где нужно подставить ваши значения):
+[Unit]
+Description=gunicorn daemon for second Django project
+After=network.target
+
+[Service]
+User=stendadm
+Group=www-data
+WorkingDirectory=/home/stendadm@rc.nbrb.by/project2_prod
+
+ExecStart=/home/stendadm@rc.nbrb.by/project2_prod/venv/bin/gunicorn \
+    --workers 3 \
+    --threads 2 \
+    --timeout 120 \
+    --graceful-timeout 60 \
+    --umask 007 \
+    --access-logfile /home/stendadm@rc.nbrb.by/project2_prod/logs_gun/gunicorn-access.log \
+    --error-logfile /home/stendadm@rc.nbrb.by/project2_prod/logs_gun/gunicorn-error.log \
+    --bind unix:/home/stendadm@rc.nbrb.by/project2_prod/gunicorn.sock \
+    config.wsgi:application  # <-- ЗАМЕНИТЕ на реальное имя вашего wsgi-модуля, например, myproject.wsgi:application
+
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+Настройка Nginx для второго приложения
+Поскольку ваше первое приложение настроено как default_server с server_name _, оно перехватывает все запросы, которые не подходят под другие правила. Поэтому для второго приложения обязательно нужно указать конкретный домен или поддомен в директиве server_name.
+Создайте новый конфигурационный файл Nginx:
+sudo nano /etc/nginx/sites-available/project2
+Вставьте туда следующий конфиг:
+server {
+    listen 80;
+    listen [::]:80;
+    
+    # Укажите здесь реальный домен или поддомен для второго приложения
+    server_name project2.example.com; 
+
+    location /static/ {
+        alias /home/stendadm@rc.nbrb.by/project2_prod/static/;
+    }
+
+    location /media/ {
+        alias /home/stendadm@rc.nbrb.by/project2_prod/media/;
+    }
+
+    location / {
+        include proxy_params;
+        proxy_pass http://unix:/home/stendadm@rc.nbrb.by/project2_prod/gunicorn.sock;
+    }
+}
+
+Активируйте этот конфиг, создав символическую ссылку:
+sudo ln -s /etc/nginx/sites-available/project2 /etc/nginx/sites-enabled/
+
+Применение настроек и перезапуск служб
+Перезагрузите конфигурацию systemd, чтобы он увидел новый сервис:
+   sudo systemctl daemon-reload
+  Включите и запустите новый сервис Gunicorn:
+     sudo systemctl enable --now gunicorn_project2
+    Проверьте конфигурацию Nginx на наличие синтаксических ошибок:
+    sudo nginx -t
+    (Если все хорошо, вы увидите syntax is ok и test is successful)
+Перезапустите Nginx, чтобы применить новые настройки:
+sudo systemctl reload nginx
+Проверка и отладка
+Убедитесь, что сокет создан и имеет правильные права:
+   ls -l /home/stendadm@rc.nbrb.by/project2_prod/gunicorn.sock
+  Вывод должен быть примерно таким: srwxrwx--- 1 stendadm www-data ... gunicorn.sock. Группа должна быть www-data.
+Проверьте статус сервиса Gunicorn:
+sudo systemctl status gunicorn_project2
+Если возникает ошибка 502 Bad Gateway, проверьте логи:
+Логи Nginx: sudo tail -n 50 /var/log/nginx/error.log
+Логи Gunicorn: cat /home/stendadm@rc.nbrb.by/project2_prod/logs_gun/gunicorn-error.log
+Если у нет возможности настроить DNS-запись для второго поддомена, вы можете настроить второе приложение на другой порт (например, 8080). В таком случае в конфиге Nginx измените начало на:
+server {
+    listen 8080;
+    listen [::]:8080;
+    server_name _;
+    # ... остальное без изменений
+}
+И тогда второе приложение будет доступно по адресу http://ваш_ip_сервера:8080. Не забудьте открыть порт 8080 в фаерволе (например, ufw allow 8080).
