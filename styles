@@ -1,0 +1,52 @@
+CREATE OR REPLACE
+PACKAGE BODY DWKR_02.REPORT_FS10 AS
+
+  FUNCTION GET_FS10_RESULT(IN_REPORT_ID NUMBER)
+           RETURN REPORT_FS10_RESULT_TBL_TP
+    PIPELINED
+    IS
+      CURSOR cur IS
+        SELECT
+          ID,
+          REPORT_ID, --              NUMBER(38,0),
+          RISK_GROUP_ID_BEGIN, --	  NUMBER(38,0),
+          BANK_ID, --                NUMBER(9, 0),
+          CLIENT_CODE, --            NUMBER(1, 0),
+          BASIS_ACTIVITY_ID, --      NUMBER(38,0),
+          BASIS_ACTIVITY_CODE, --    VARCHAR(1),
+          ROUND(MAIN_DEBT_BYN_RISK_GROUP_1_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_1_END, --    NUMBER(34,3),
+          ROUND(MAIN_DEBT_BYN_RISK_GROUP_2_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_2_END, --    NUMBER(34,3),
+          ROUND(MAIN_DEBT_BYN_RISK_GROUP_3_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_3_END, --    NUMBER(34,3),
+          ROUND(MAIN_DEBT_BYN_RISK_GROUP_4_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_4_END, --    NUMBER(34,3),
+          ROUND(MAIN_DEBT_BYN_RISK_GROUP_5_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_5_END, --    NUMBER(34,3),
+          ROUND(MAIN_DEBT_BYN_RISK_GROUP_6_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_6_END, --    NUMBER(34,3),
+          RISK_GROUP_NAME_BEGIN, --  VARCHAR2(250),
+          BANK_NAME, --              VARCHAR(255),
+          CLIENT_TYPE_NAME, --       VARCHAR(20),
+          BASIS_ACTIVITY_NAME --    VARCHAR(255)
+        FROM DWKR_02.REPORT_FS10_RESULT
+        WHERE REPORT_ID = IN_REPORT_ID
+        ORDER BY ID;
+
+  BEGIN
+
+    FOR rec IN cur
+    LOOP
+      PIPE ROW(rec);
+    END LOOP;
+    RETURN;
+
+  END GET_FS10_RESULT;
+
+
+PROCEDURE PROC_FS10
+/*
+  РџСЂРѕС†РµРґСѓСЂР° РІС‹РїРѕР»РЅСЏРµС‚ РѕС‚С‡РµС‚ FS10 - 
+  РљРѕРЅРµС‡РЅР°СЏ С†РµР»СЊ РїСЂРѕС†РµРґСѓСЂС‹ - С„РѕСЂРјРёСЂРѕРІР°РЅРёРµ С‚Р°Р±Р»РёС† DWKR_02.FS10_RESULT
+*/
+ (
+    in_DATE_RANGE_BEGIN DATE, -- РќР°С‡Р°Р»СЊРЅР°СЏ РґР°С‚Р° РґРёР°РїР°Р·РѕРЅР°
+    in_DATE_RANGE_END DATE,   -- РљРѕРЅРµС‡РЅР°СЏ РґР°С‚Р° РґРёР°РїР°Р·РѕРЅР°
+    in_MIN_CONTRACT_TERM IN NUMBER, -- РњРёРЅРёРјР°Р»СЊРЅС‹Р№ СЃСЂРѕРє РґРµР№СЃС‚РІРёСЏ РґРѕРіРѕРІРѕСЂР° (РєРѕР»РёС‡РµСЃС‚РІРѕ Р»РµС‚)
+    in_MAX_CONTRACT_TERM IN NUMBER, -- РњР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЃСЂРѕРє РґРµР№СЃС‚РІРёСЏ РґРѕРіРѕРІРѕСЂР° (РєРѕР»РёС‡РµСЃС‚РІРѕ Р»РµС‚)
+    in_MIN_CONTRACT_EXPIRATION_TERM IN NUMBER, -- РњРёРЅРёРјР°Р»СЊРЅС‹Р№ РѕСЃС‚Р°РІС€РёР№СЃСЏ СЃСЂРѕРє РґРѕ РєРѕРЅС†Р° СЃСЂРѕРєР° РґРµР№СЃС‚РІРёСЏ РґРѕРіРѕРІРѕСЂР° (РєРѕР»РёС‡РµСЃС‚РІРѕ Р»РµС‚)
