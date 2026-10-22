@@ -1,70 +1,1247 @@
-import requests
-import base64
-import sys
+CREATE OR REPLACE
+PACKAGE BODY DWKR_02.REPORT_FS10 AS
 
-GITHUB_TOKEN = "ghp"
-OWNER = "IRLBeast"
-REPO = "templates"
-FILE_PATH = "styles"
-BRANCH = "main"
+  FUNCTION GET_FS10_RESULT(IN_REPORT_ID NUMBER)
+           RETURN REPORT_FS10_RESULT_TBL_TP
+    PIPELINED
+    IS
+      CURSOR cur IS
+        SELECT
+          ID,
+          REPORT_ID, --              NUMBER(38,0),
+          RISK_GROUP_ID_BEGIN, --	  NUMBER(38,0),
+          BANK_ID, --                NUMBER(9, 0),
+          CLIENT_CODE, --            NUMBER(1, 0),
+          BASIS_ACTIVITY_ID, --      NUMBER(38,0),
+          BASIS_ACTIVITY_CODE, --    VARCHAR(1),
+          ROUND(MAIN_DEBT_BYN_RISK_GROUP_1_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_1_END, --    NUMBER(34,3),
+          ROUND(MAIN_DEBT_BYN_RISK_GROUP_2_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_2_END, --    NUMBER(34,3),
+          ROUND(MAIN_DEBT_BYN_RISK_GROUP_3_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_3_END, --    NUMBER(34,3),
+          ROUND(MAIN_DEBT_BYN_RISK_GROUP_4_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_4_END, --    NUMBER(34,3),
+          ROUND(MAIN_DEBT_BYN_RISK_GROUP_5_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_5_END, --    NUMBER(34,3),
+          ROUND(MAIN_DEBT_BYN_RISK_GROUP_6_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_6_END, --    NUMBER(34,3),
+          RISK_GROUP_NAME_BEGIN, --  VARCHAR2(250),
+          BANK_NAME, --              VARCHAR(255),
+          CLIENT_TYPE_NAME, --       VARCHAR(20),
+          BASIS_ACTIVITY_NAME --    VARCHAR(255)
+        FROM DWKR_02.REPORT_FS10_RESULT
+        WHERE REPORT_ID = IN_REPORT_ID
+        ORDER BY ID;
 
-LOCAL_FILE = "local.txt"
+  BEGIN
 
+    FOR rec IN cur
+    LOOP
+      PIPE ROW(rec);
+    END LOOP;
+    RETURN;
 
-def get_file():
-    url = f"https://api.github.com/repos/{OWNER}/{REPO}/contents/{FILE_PATH}"
-    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-
-    r = requests.get(url, headers=headers, verify=False)
-    r.raise_for_status()
-    data = r.json()
-
-    sha = data["sha"]
-    content = base64.b64decode(data["content"]).decode("utf-8")
-
-    #  sha 
-    with open(".sha", "w") as f:
-        f.write(sha)
-
-    with open(LOCAL_FILE, "w") as f:
-        f.write(content)
-
-    print("  ", LOCAL_FILE)
-
-
-def put_file():
-    url = f"https://api.github.com/repos/{OWNER}/{REPO}/contents/{FILE_PATH}"
-    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
-
-    with open(LOCAL_FILE, "r", encoding = "utf-8", errors="ignore") as f:
-        content = f.read()
-
-    with open(".sha") as f:
-        sha = f.read()
-
-    encoded = base64.b64encode(content.encode()).decode()
-
-    payload = {
-        "message": "Update via script",
-        "content": encoded,
-        "sha": sha,
-        "branch": BRANCH
-    }
-
-    r = requests.put(url, headers=headers, json=payload, verify=False)
-    r.raise_for_status()
-
-    print(" ")
+  END GET_FS10_RESULT;
 
 
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print(": get  put")
-        sys.exit(1)
+PROCEDURE PROC_FS10
+/*
+  Процедура выполняет отчет FS10 - 
+  Конечная цель процедуры - формирование таблиц DWKR_02.FS10_RESULT
+*/
+ (
+    in_DATE_RANGE_BEGIN DATE, -- Начальная дата диапазона
+    in_DATE_RANGE_END DATE,   -- Конечная дата диапазона
+    in_MIN_CONTRACT_TERM IN NUMBER, -- Минимальный срок действия договора (количество лет)
+    in_MAX_CONTRACT_TERM IN NUMBER, -- Максимальный срок действия договора (количество лет)
+    in_MIN_CONTRACT_EXPIRATION_TERM IN NUMBER, -- Минимальный оставшийся срок до конца срока действия договора (количество лет)
+    in_MAX_CONTRACT_EXPIRATION_TERM IN NUMBER, -- Максимальный оставшийся срок до конца срока действия договора (количество лет)
+    in_BANK_ID IN NUMBER, -- Идентификатор участника АИС КР (источника формирования КИ)
+    in_CRED_HIST_SOURCE_GROUP_ID_TBL IN DWKR_02.ID_TBL_TP DEFAULT NULL, -- Идентификаторы групп источников формирования кредитной истории (NULL - все группы)
+    in_CONTRACT_TYPE_ID_TBL IN DWKR_02.ID_TBL_TP,  -- Виды договоров (1,2,3,7,8,9,10), (NULL - все виды договоров кредитного характера)
+    in_CURRENCY_TYPE IN NUMBER, -- признак валюты задолженности (национальная / иностранная / все)
+    in_CURRENCY_ID_TBL IN DWKR_02.ID_TBL_TP,  -- Цифровые коды валют, (NULL - все валюты)
+    in_BORR_TYPE_ID IN NUMBER DEFAULT NULL,   -- Признак физ.лицо (0) / юр.лицо (1) / NULL - все
+    in_BASIS_ACTIVITY_CODE_TBL IN DWKR_02.CHAR_TBL_TP,  -- Вид деятельности '('A'/'Q'/'A, ,...,Q'/...), (NULL - все виды)
+    in_RISK_GROUP_REASON_ID_TBL IN DWKR_02.ID_TBL_TP,  -- Перечень оснований для классификации по группам риска, (NULL - все виды оснований)
+    OUT_REPORT_ID OUT NUMBER
+ )
+IS
+  lCONTRACT_TYPE_COUNT NUMBER DEFAULT 0;
+  lCONTRACT_TYPE_STR VARCHAR2(256) DEFAULT ''; 
 
-    if sys.argv[1] == "get":
-        get_file()
-    elif sys.argv[1] == "put":
-        put_file()
-    else:
-        print(" ")
+  L_CURRENCY_ID_COUNT NUMBER DEFAULT 0;
+  L_CURRENCY_ID_STR VARCHAR2(256) DEFAULT '';
+
+  L_BASIS_ACTIVITY_COUNT NUMBER DEFAULT 0;
+  L_BASIS_ACTIVITY_STR VARCHAR2(1024) DEFAULT '';
+
+  L_REPORT_ID NUMBER DEFAULT NULL;
+
+  L_LOG_FILE_NAME VARCHAR2(256) DEFAULT 'LOG_default.log';
+
+BEGIN
+  DWKR_02.PROC_LOG_REPORT(FILE_NAME => '_DWKR_02.REPORT_FS10.PROC_FS10',LOG_STR => SYSTIMESTAMP||' Started');
+
+  SELECT COUNT(*),
+        LISTAGG(TO_CHAR(ID), ',') WITHIN GROUP (ORDER BY ID)
+  INTO lCONTRACT_TYPE_COUNT,
+       lCONTRACT_TYPE_STR
+  FROM TABLE(in_CONTRACT_TYPE_ID_TBL);
+
+  SELECT COUNT(*),
+        LISTAGG(TO_CHAR(ID), ',') WITHIN GROUP (ORDER BY ID)
+  INTO L_CURRENCY_ID_COUNT,
+       L_CURRENCY_ID_STR
+  FROM TABLE(IN_CURRENCY_ID_TBL);
+
+  SELECT COUNT(*),
+        LISTAGG(CODE, ',') WITHIN GROUP (ORDER BY CODE)
+  INTO L_BASIS_ACTIVITY_COUNT,
+       L_BASIS_ACTIVITY_STR
+  FROM TABLE(in_BASIS_ACTIVITY_CODE_TBL);
+
+    -- in_DATE => '''||in_DATE||''',
+
+  -- лог входящих параметров отчета FS10
+  DWKR_02.PROC_LOG_REPORT(FILE_NAME => '_FS10',LOG_STR => SYSTIMESTAMP||'
+  BEGIN
+    DWKR_02.PROC_FS10
+    (
+    in_DATE_RANGE_BEGIN => '''||in_DATE_RANGE_BEGIN||''',
+    in_DATE_RANGE_END => '''||in_DATE_RANGE_END||''',
+    lCONTRACT_TYPE_COUNT => '||lCONTRACT_TYPE_COUNT||',
+    lCONTRACT_TYPE_STR => '''||lCONTRACT_TYPE_STR||''',
+    in_CURRENCY_TYPE => '||in_CURRENCY_TYPE||',
+    L_CURRENCY_ID_COUNT => '||L_CURRENCY_ID_COUNT||',
+    L_CURRENCY_ID_STR => '''||L_CURRENCY_ID_STR||''',
+    L_BASIS_ACTIVITY_COUNT => '||L_BASIS_ACTIVITY_COUNT||',
+    L_BASIS_ACTIVITY_STR => '''||L_BASIS_ACTIVITY_STR||'''
+    );
+  END;
+  /'
+  );
+
+  ----------------------------------------------------------------------------------
+  INSERT INTO DWKR_02.REPORT(REPORT_NAME)
+  VALUES('FS10')
+  RETURNING REPORT_ID INTO L_REPORT_ID;
+
+  DWKR_02.PROC_LOG_REPORT(FILE_NAME => '_DWKR_02.REPORT_FS10.PROC_FS10',LOG_STR => SYSTIMESTAMP||' DWKR_02.REPORT');
+  ----------------------------------------------------------------------------------
+
+--  ----------------------------------------------------------------------------------
+--  -- DATE
+--  INSERT INTO DWKR_02.REPORT_PARAM_REPORTING_DATE(REPORT_ID, REPORTING_DATE)
+--  VALUES(L_REPORT_ID, in_DATE);
+--
+--  DWKR_02.PROC_LOG_REPORT(FILE_NAME => '_DWKR_02.REPORT_FS10.PROC_FS10',LOG_STR => SYSTIMESTAMP||' DWKR_02.REPORT_PARAM_REPORTING_DATE');
+--  ----------------------------------------------------------------------------------
+
+  ----------------------------------------------------------------------------------
+  -- DATE_RANGE
+  INSERT INTO DWKR_02.REPORT_PARAM_DATE_RANGE(REPORT_ID, DATE_BEGIN, DATE_END)
+  VALUES(L_REPORT_ID, in_DATE_RANGE_BEGIN, in_DATE_RANGE_END);
+
+  DWKR_02.PROC_LOG_REPORT(FILE_NAME => '_DWKR_02.REPORT_FS10.PROC_FS10',LOG_STR => SYSTIMESTAMP||' DWKR_02.REPORT_PARAM_DATE_RANGE');
+  ----------------------------------------------------------------------------------
+
+  ----------------------------------------------------------------------------------
+  -- BANK
+  -- in_BANK_ID NUMBER, -- Идентификатор участника АИС КР
+
+  IF in_BANK_ID IS NOT NULL THEN
+    INSERT INTO DWKR_02.REPORT_PARAM_BANK(REPORT_ID, BANK_ID)
+    VALUES(L_REPORT_ID, in_BANK_ID);
+
+    DWKR_02.PROC_LOG_REPORT(FILE_NAME => '_DWKR_02.REPORT_FS10.PROC_FS10',LOG_STR => SYSTIMESTAMP||' DWKR_02.REPORT_PARAM_BANK');
+  END IF;
+
+  ----------------------------------------------------------------------------------
+
+  ----------------------------------------------------------------------------------
+  -- KRED_TYPE
+  IF in_CONTRACT_TYPE_ID_TBL IS NOT NULL THEN
+    INSERT INTO DWKR_02.REPORT_PARAM_KRED_TYPE(REPORT_ID, KRED_TYPE_ID)
+    --  SELECT L_REPORT_ID, ID FROM TABLE(in_KRED_TYPE_ID_TBL);
+      SELECT DISTINCT L_REPORT_ID, KRED_TYPE_ID FROM DWKR_02.KRED_TYPE_A
+      WHERE KRED_TYPE_ID IN (SELECT ID FROM TABLE(in_CONTRACT_TYPE_ID_TBL));
+  END IF;
+
+  DWKR_02.PROC_LOG_REPORT(FILE_NAME => '_DWKR_02.REPORT_FS10.PROC_FS10',LOG_STR => SYSTIMESTAMP||' DWKR_02.REPORT_PARAM_KRED_TYPE');
+  ----------------------------------------------------------------------------------
+ 
+  ----------------------------------------------------------------------------------
+  -- CURRENCY_TYPE
+  IF in_CURRENCY_TYPE IS NOT NULL THEN
+      INSERT INTO DWKR_02.REPORT_PARAM_CURRENCY_TYPE(REPORT_ID, CURRENCY_TYPE_ID)
+      VALUES(L_REPORT_ID, in_CURRENCY_TYPE);
+  END IF;
+
+  DWKR_02.PROC_LOG_REPORT(FILE_NAME => '_DWKR_02.REPORT_FS10.PROC_FS10',LOG_STR => SYSTIMESTAMP||' DWKR_02.REPORT_PARAM_CURRENCY_TYPE');
+  ----------------------------------------------------------------------------------
+
+  ----------------------------------------------------------------------------------
+  -- CURRENCY_ID
+  IF in_CURRENCY_ID_TBL IS NOT NULL THEN
+    INSERT INTO DWKR_02.REPORT_PARAM_CURRENCY(REPORT_ID, CURRENCY_ID)
+      --  SELECT L_REPORT_ID, ID FROM TABLE(in_CURRENCY_ID_TBL);
+      SELECT DISTINCT L_REPORT_ID, VALUTA_ID FROM DWKR_02.V_VALUTA
+      WHERE VALUTA_ID IN (SELECT ID FROM TABLE(in_CURRENCY_ID_TBL));
+  END IF;
+
+  DWKR_02.PROC_LOG_REPORT(FILE_NAME => '_DWKR_02.REPORT_FS10.PROC_FS10',LOG_STR => SYSTIMESTAMP||' DWKR_02.REPORT_PARAM_CURRENCY');
+  ----------------------------------------------------------------------------------
+
+  ----------------------------------------------------------------------------------
+
+  -- CRED_HIST_SOURCE_GROUP
+  IF in_CRED_HIST_SOURCE_GROUP_ID_TBL IS NOT NULL THEN
+    INSERT INTO DWKR_02.REPORT_PARAM_CRED_HIST_SOURCE_GROUP(REPORT_ID, CRED_HIST_SOURCE_GROUP_ID)
+      SELECT DISTINCT L_REPORT_ID, CRED_HIST_SOURCE_GROUP_ID FROM DWKR_02.V_CRED_HIST_SOURCE_GROUP_DATE_RANGE_LATEST
+      WHERE CRED_HIST_SOURCE_GROUP_ID IN (SELECT ID FROM TABLE(in_CRED_HIST_SOURCE_GROUP_ID_TBL));
+  END IF;
+
+  DWKR_02.PROC_LOG_REPORT(FILE_NAME => '_DWKR_02.REPORT_FS6.PROC_FS10',LOG_STR => SYSTIMESTAMP||' DWKR_02.REPORT_PARAM_CRED_HIST_SOURCE_GROUP');
+
+  ----------------------------------------------------------------------------------
+
+  ----------------------------------------------------------------------------------
+  -- BORR_TYPE
+
+  IF in_BORR_TYPE_ID IS NOT NULL THEN
+    INSERT INTO DWKR_02.REPORT_PARAM_BORR_TYPE(REPORT_ID, BORR_TYPE_ID)
+    VALUES(L_REPORT_ID, in_BORR_TYPE_ID);
+
+    DWKR_02.PROC_LOG_REPORT(FILE_NAME => '_DWKR_02.REPORT_FS10.PROC_FS10',LOG_STR => SYSTIMESTAMP||' DWKR_02.REPORT_PARAM_BORR_TYPE');
+  END IF;
+
+  ----------------------------------------------------------------------------------
+
+  ----------------------------------------------------------------------------------
+  -- BASIS_ACTIVITY
+  IF in_BASIS_ACTIVITY_CODE_TBL IS NOT NULL THEN
+      INSERT INTO DWKR_02.REPORT_PARAM_BASIS_ACTIVITY(REPORT_ID, BASIS_ACTIVITY_ID, BASIS_ACTIVITY_CODE)
+        SELECT DISTINCT L_REPORT_ID, BASIS_ACTIVITY_ID, BASIS_ACTIVITY_CODE FROM DWKR_02.V_BASIS_ACTIVITY
+        WHERE BASIS_ACTIVITY_CODE IN (SELECT CODE FROM TABLE(in_BASIS_ACTIVITY_CODE_TBL));
+  END IF;
+
+  DWKR_02.PROC_LOG_REPORT(FILE_NAME => '_DWKR_02.REPORT_FS10.PROC_FS10',LOG_STR => SYSTIMESTAMP||' DWKR_02.REPORT_PARAM_BASIS_ACTIVITY');
+  ----------------------------------------------------------------------------------
+
+
+
+  INSERT INTO DWKR_02.REPORT_FS10_RESULT
+  (
+    -- ID                     NUMBER(38,0) NOT NULL,
+    REPORT_ID, --              NUMBER(38,0),
+    RISK_GROUP_ID_BEGIN, --	  NUMBER(38,0),
+    BANK_ID, --                NUMBER( 9,0),
+    CLIENT_CODE, --            NUMBER( 1,0),
+    BASIS_ACTIVITY_ID, --      NUMBER(38,0),
+    BASIS_ACTIVITY_CODE, --    VARCHAR2(1),
+    MAIN_DEBT_BYN_RISK_GROUP_1_END, --    NUMBER(34,3),
+    MAIN_DEBT_BYN_RISK_GROUP_2_END, --    NUMBER(34,3),
+    MAIN_DEBT_BYN_RISK_GROUP_3_END, --    NUMBER(34,3),
+    MAIN_DEBT_BYN_RISK_GROUP_4_END, --    NUMBER(34,3),
+    MAIN_DEBT_BYN_RISK_GROUP_5_END, --    NUMBER(34,3),
+    MAIN_DEBT_BYN_RISK_GROUP_6_END, --    NUMBER(34,3),
+    RISK_GROUP_NAME_BEGIN, --  VARCHAR2(250),
+    BANK_NAME, --              VARCHAR2(255),
+    CLIENT_TYPE_NAME, --       VARCHAR2(20),
+    BASIS_ACTIVITY_NAME --    VARCHAR2(255),
+  )
+  WITH 
+    --prm_dt AS 
+    --( SELECT REPORT_ID, REPORTING_DATE
+    --  FROM DWKR_02.REPORT_PARAM_REPORTING_DATE
+    --  WHERE REPORT_ID = L_REPORT_ID
+    --),
+    prm_dt_range AS 
+    (SELECT REPORT_ID, DATE_BEGIN, DATE_END
+     FROM DWKR_02.REPORT_PARAM_DATE_RANGE
+     WHERE REPORT_ID = L_REPORT_ID
+    ),
+    prm_kt AS
+    ( SELECT REPORT_ID, KRED_TYPE_ID
+      FROM DWKR_02.REPORT_PARAM_KRED_TYPE
+      WHERE REPORT_ID = L_REPORT_ID
+    ),
+    prm_base_act AS
+    (
+      SELECT L_REPORT_ID AS REPORT_ID, v.BASIS_ACTIVITY_ID, v.BASIS_ACTIVITY_CODE
+      FROM  DWKR_02.V_BASIS_ACTIVITY v
+            LEFT OUTER JOIN
+            DWKR_02.REPORT_PARAM_BASIS_ACTIVITY p
+            ON v.BASIS_ACTIVITY_ID = p.BASIS_ACTIVITY_ID
+               AND p.REPORT_ID = L_REPORT_ID
+      WHERE (EXISTS(SELECT * FROM DWKR_02.REPORT_PARAM_BASIS_ACTIVITY WHERE REPORT_ID = L_REPORT_ID)
+             AND v.BASIS_ACTIVITY_ID = p.BASIS_ACTIVITY_ID
+            )
+            OR NOT EXISTS(SELECT * FROM DWKR_02.REPORT_PARAM_BASIS_ACTIVITY WHERE REPORT_ID = L_REPORT_ID)
+      ORDER BY REPORT_ID, BASIS_ACTIVITY_ID
+    ),
+    prm_borr AS
+    (
+      SELECT L_REPORT_ID AS REPORT_ID, br.BORR_ID
+      FROM  DWKR_02.BORR br
+            LEFT OUTER JOIN
+            DWKR_02.REPORT_PARAM_BORR_TYPE p_br_tp
+            ON br.CLIENT_CODE = p_br_tp.BORR_TYPE_ID
+               AND p_br_tp.REPORT_ID = L_REPORT_ID
+      WHERE (
+              (EXISTS(SELECT * FROM DWKR_02.REPORT_PARAM_BORR_TYPE WHERE REPORT_ID = L_REPORT_ID)
+               AND br.CLIENT_CODE = p_br_tp.BORR_TYPE_ID AND p_br_tp.REPORT_ID = L_REPORT_ID
+              )
+              OR
+              NOT EXISTS(SELECT * FROM DWKR_02.REPORT_PARAM_BORR_TYPE WHERE REPORT_ID = L_REPORT_ID)
+            )
+      ORDER BY REPORT_ID, BORR_ID
+  ),
+    prm_bank AS
+    (
+      SELECT DISTINCT L_REPORT_ID AS REPORT_ID, bn.BANK_ID
+      FROM  DWKR_02.V_BANK bn
+            LEFT OUTER JOIN
+            DWKR_02.REPORT_PARAM_BANK p_bn
+            ON bn.BANK_ID = p_bn.BANK_ID
+               AND p_bn.REPORT_ID = L_REPORT_ID
+            LEFT OUTER JOIN
+            DWKR_02.V_BANK_CRED_HIST_SOURCE_GROUP_DATE_RANGE_LATEST bank_cr_hist_sg
+            ON bn.BANK_ID = bank_cr_hist_sg.BANK_ID
+            LEFT OUTER JOIN
+            DWKR_02.REPORT_PARAM_CRED_HIST_SOURCE_GROUP p_cr_hist_sg
+            ON p_cr_hist_sg.CRED_HIST_SOURCE_GROUP_ID = bank_cr_hist_sg.CRED_HIST_SOURCE_GROUP_ID
+               AND p_cr_hist_sg.REPORT_ID = L_REPORT_ID
+      WHERE (
+              EXISTS(SELECT * FROM DWKR_02.REPORT_PARAM_CRED_HIST_SOURCE_GROUP WHERE REPORT_ID = L_REPORT_ID)
+              AND
+              (     bn.BANK_ID = bank_cr_hist_sg.BANK_ID
+                AND bank_cr_hist_sg.CRED_HIST_SOURCE_GROUP_ID = p_cr_hist_sg.CRED_HIST_SOURCE_GROUP_ID
+                AND p_cr_hist_sg.REPORT_ID = L_REPORT_ID
+              )
+            )
+            OR 
+            (
+              NOT EXISTS(SELECT * FROM DWKR_02.REPORT_PARAM_CRED_HIST_SOURCE_GROUP WHERE REPORT_ID = L_REPORT_ID)
+            )
+      ORDER BY REPORT_ID, BANK_ID
+    ),
+    prm_crncy AS
+    (
+      SELECT REPORT_ID, CURRENCY_ID
+      FROM DWKR_02.REPORT_PARAM_CURRENCY
+      WHERE REPORT_ID = L_REPORT_ID
+      
+      UNION
+  
+      SELECT L_REPORT_ID AS REPORT_ID, v.VALUTA_ID AS CURRENCY_ID
+      FROM DWKR_02.V_VALUTA v
+           LEFT OUTER JOIN
+           DWKR_02.REPORT_PARAM_CURRENCY_TYPE pct
+           ON ( pct.REPORT_ID = L_REPORT_ID
+                AND
+                (
+                  (v.VALUTA_ID = 933 AND pct.CURRENCY_TYPE_ID IN (0,1))
+                  OR
+                  (v.VALUTA_ID <> 933 AND pct.CURRENCY_TYPE_ID IN (0,2))
+                )
+              )
+      WHERE ( (EXISTS (SELECT * FROM DWKR_02.REPORT_PARAM_CURRENCY_TYPE WHERE REPORT_ID = L_REPORT_ID) 
+                AND
+                (
+                  (v.VALUTA_ID = 933 AND pct.CURRENCY_TYPE_ID IN (0,1))
+                  OR
+                  (v.VALUTA_ID <> 933 AND pct.CURRENCY_TYPE_ID IN (0,2))
+                )
+              )
+              OR 
+              NOT EXISTS (SELECT * FROM DWKR_02.REPORT_PARAM_CURRENCY_TYPE WHERE REPORT_ID = L_REPORT_ID)
+            )
+            AND NOT EXISTS (SELECT * FROM DWKR_02.REPORT_PARAM_CURRENCY WHERE REPORT_ID = L_REPORT_ID)
+      ORDER BY REPORT_ID, CURRENCY_ID
+    ),
+    kd_end AS
+    (
+      SELECT
+            ur.BASIS_ACTIVITY_ID,
+            kd.BORR_ID,
+            kd.KRED_DOG_ID,
+            kd.BANK_ID,
+            kd.KRED_TYPE_ID,
+            kd.KRED_TYPE_VID_ID,
+            kd.KRED_DOG_DATE,
+            kd.KRED_DOG_END_DATE,
+            kd.TOTAL_END_DATE
+      FROM   prm_dt_range,
+             DWKR_02.KD_5Y kd
+             INNER JOIN
+             DWKR_02.BORR_UR ur
+             ON kd.BORR_ID = ur.BORR_ID
+             INNER JOIN
+             DWKR_02.V_BANK bn
+             ON kd.BANK_ID = bn.BANK_ID
+             INNER JOIN
+             prm_base_act
+             ON ur.BASIS_ACTIVITY_ID = prm_base_act.BASIS_ACTIVITY_ID
+  
+             LEFT OUTER JOIN
+             prm_kt
+             ON kd.KRED_TYPE_ID = prm_kt.KRED_TYPE_ID
+        WHERE kd.KRED_TYPE_ID IN (1,2,3,7,8,9,10)
+          AND (    EXISTS (SELECT * FROM prm_kt) AND kd.KRED_TYPE_ID = prm_kt.KRED_TYPE_ID
+               OR
+               NOT EXISTS (SELECT * FROM prm_kt) )
+  
+          AND kd.KRED_DOG_DATE <= prm_dt_range.DATE_END
+          AND ( kd.TOTAL_END_DATE IS NULL OR
+                kd.TOTAL_END_DATE >= prm_dt_range.DATE_END
+              )
+    ),
+    kd_end_crncy AS
+    (
+       SELECT DISTINCT
+            BORR_ID,
+            KRED_DOG_ID,
+            VALUTA_ID
+       FROM
+       (
+          SELECT DISTINCT
+              kd_end.BORR_ID,
+              kd_end.KRED_DOG_ID,
+              kdis.VALUTA_ID
+          FROM  prm_dt_range,
+                kd_end
+                INNER JOIN
+                DWKR_02.KD_ISP_SUM_AE_5Y kdis
+                ON kd_end.BORR_ID = kdis.BORR_ID AND kd_end.KRED_DOG_ID = kdis.KRED_DOG_ID
+          WHERE kdis.BEGIN_DATE <= prm_dt_range.DATE_END
+            AND (kdis.END_DATE IS NULL OR kdis.END_DATE >= prm_dt_range.DATE_END)
+  
+          UNION
+  
+          SELECT DISTINCT
+              kd_end.BORR_ID,
+              kd_end.KRED_DOG_ID,
+              lt1.VALUTA_ID
+          FROM  prm_dt_range,
+                kd_end
+                INNER JOIN
+                DWKR_02.KD_ISP_LATE_REST1_AE_5Y lt1
+                ON kd_end.BORR_ID = lt1.BORR_ID AND kd_end.KRED_DOG_ID = lt1.KRED_DOG_ID
+          WHERE lt1.BEGIN_DATE <= prm_dt_range.DATE_END
+            AND (lt1.END_DATE IS NULL OR lt1.END_DATE >= prm_dt_range.DATE_END)
+  
+          UNION
+  
+          SELECT DISTINCT
+              kd_end.BORR_ID,
+              kd_end.KRED_DOG_ID,
+              lt6.VALUTA_ID
+          FROM  prm_dt_range,
+                kd_end
+                INNER JOIN
+                DWKR_02.KD_ISP_LATE_REST6_AE_5Y lt6
+                ON kd_end.BORR_ID = lt6.BORR_ID AND kd_end.KRED_DOG_ID = lt6.KRED_DOG_ID
+          WHERE lt6.BEGIN_DATE <= prm_dt_range.DATE_END
+            AND (lt6.END_DATE IS NULL OR lt6.END_DATE >= prm_dt_range.DATE_END)
+  
+          UNION
+  
+          SELECT DISTINCT
+              kd_end.BORR_ID,
+              kd_end.KRED_DOG_ID,
+              lt7.VALUTA_ID
+          FROM  prm_dt_range,
+                kd_end
+                INNER JOIN
+                DWKR_02.KD_ISP_LATE_REST7_AE_5Y lt7
+                ON kd_end.BORR_ID = lt7.BORR_ID AND kd_end.KRED_DOG_ID = lt7.KRED_DOG_ID
+          WHERE lt7.BEGIN_DATE <= prm_dt_range.DATE_END
+            AND (lt7.END_DATE IS NULL OR lt7.END_DATE >= prm_dt_range.DATE_END)
+  
+          UNION
+  
+          SELECT DISTINCT
+              kd_end.BORR_ID,
+              kd_end.KRED_DOG_ID,
+              lt10.VALUTA_ID
+          FROM  prm_dt_range,
+                kd_end
+                INNER JOIN
+                DWKR_02.KD_ISP_LATE_REST10_AE_5Y lt10
+                ON kd_end.BORR_ID = lt10.BORR_ID AND kd_end.KRED_DOG_ID = lt10.KRED_DOG_ID
+          WHERE lt10.BEGIN_DATE <= prm_dt_range.DATE_END
+            AND (lt10.END_DATE IS NULL OR lt10.END_DATE >= prm_dt_range.DATE_END)
+  
+          UNION
+  
+          SELECT DISTINCT
+              kd_end.BORR_ID,
+              kd_end.KRED_DOG_ID,
+              lt11.VALUTA_ID
+          FROM  prm_dt_range,
+                kd_end
+                INNER JOIN
+                DWKR_02.KD_ISP_LATE_REST11_AE_5Y lt11
+                ON kd_end.BORR_ID = lt11.BORR_ID AND kd_end.KRED_DOG_ID = lt11.KRED_DOG_ID
+          WHERE lt11.BEGIN_DATE <= prm_dt_range.DATE_END
+            AND (lt11.END_DATE IS NULL OR lt11.END_DATE >= prm_dt_range.DATE_END)
+       ) t
+       INNER JOIN
+       prm_crncy
+       ON prm_crncy.CURRENCY_ID = t.VALUTA_ID
+    ),
+    kd_begin AS
+    (
+      SELECT
+            ur.BASIS_ACTIVITY_ID,
+            kd.BORR_ID,
+            kd.KRED_DOG_ID,
+            kd.BANK_ID,
+            kd.KRED_TYPE_ID,
+            kd.KRED_TYPE_VID_ID,
+            kd.KRED_DOG_DATE,
+            kd.KRED_DOG_END_DATE,
+            kd.TOTAL_END_DATE
+      FROM   prm_dt_range,
+             DWKR_02.KD_5Y kd
+             INNER JOIN
+             DWKR_02.BORR_UR ur
+             ON kd.BORR_ID = ur.BORR_ID
+             INNER JOIN
+             DWKR_02.V_BANK bn
+             ON kd.BANK_ID = bn.BANK_ID
+  
+             INNER JOIN
+             prm_base_act
+             ON ur.BASIS_ACTIVITY_ID = prm_base_act.BASIS_ACTIVITY_ID
+  
+             LEFT OUTER JOIN
+             prm_kt
+             ON kd.KRED_TYPE_ID = prm_kt.KRED_TYPE_ID
+        WHERE kd.KRED_TYPE_ID IN (1,2,3,7,8,9,10)
+          AND (    EXISTS (SELECT * FROM prm_kt) AND kd.KRED_TYPE_ID = prm_kt.KRED_TYPE_ID
+               OR
+               NOT EXISTS (SELECT * FROM prm_kt) )
+          AND kd.KRED_DOG_DATE <= prm_dt_range.DATE_BEGIN
+          AND ( kd.TOTAL_END_DATE IS NULL OR
+                kd.TOTAL_END_DATE >= prm_dt_range.DATE_BEGIN
+              )
+    ),
+    kd_begin_crncy AS
+    (
+       SELECT DISTINCT
+            BORR_ID,
+            KRED_DOG_ID,
+            VALUTA_ID
+       FROM
+       (
+          SELECT DISTINCT
+              kd_end.BORR_ID,
+              kd_end.KRED_DOG_ID,
+              kdis.VALUTA_ID
+          FROM  prm_dt_range,
+                kd_end
+                INNER JOIN
+                DWKR_02.KD_ISP_SUM_AE_5Y kdis
+                ON kd_end.BORR_ID = kdis.BORR_ID AND kd_end.KRED_DOG_ID = kdis.KRED_DOG_ID
+          WHERE kdis.BEGIN_DATE <= prm_dt_range.DATE_BEGIN
+            AND (kdis.END_DATE IS NULL OR kdis.END_DATE >= prm_dt_range.DATE_BEGIN)
+  
+          UNION
+  
+          SELECT DISTINCT
+              kd_end.BORR_ID,
+              kd_end.KRED_DOG_ID,
+              lt1.VALUTA_ID
+          FROM  prm_dt_range,
+                kd_end
+                INNER JOIN
+                DWKR_02.KD_ISP_LATE_REST1_AE_5Y lt1
+                ON kd_end.BORR_ID = lt1.BORR_ID AND kd_end.KRED_DOG_ID = lt1.KRED_DOG_ID
+          WHERE lt1.BEGIN_DATE <= prm_dt_range.DATE_BEGIN
+            AND (lt1.END_DATE IS NULL OR lt1.END_DATE >= prm_dt_range.DATE_BEGIN)
+  
+          UNION
+  
+          SELECT DISTINCT
+              kd_end.BORR_ID,
+              kd_end.KRED_DOG_ID,
+              lt6.VALUTA_ID
+          FROM  prm_dt_range,
+                kd_end
+                INNER JOIN
+                DWKR_02.KD_ISP_LATE_REST6_AE_5Y lt6
+                ON kd_end.BORR_ID = lt6.BORR_ID AND kd_end.KRED_DOG_ID = lt6.KRED_DOG_ID
+          WHERE lt6.BEGIN_DATE <= prm_dt_range.DATE_BEGIN
+            AND (lt6.END_DATE IS NULL OR lt6.END_DATE >= prm_dt_range.DATE_BEGIN)
+  
+          UNION
+  
+          SELECT DISTINCT
+              kd_end.BORR_ID,
+              kd_end.KRED_DOG_ID,
+              lt7.VALUTA_ID
+          FROM  prm_dt_range,
+                kd_end
+                INNER JOIN
+                DWKR_02.KD_ISP_LATE_REST7_AE_5Y lt7
+                ON kd_end.BORR_ID = lt7.BORR_ID AND kd_end.KRED_DOG_ID = lt7.KRED_DOG_ID
+          WHERE lt7.BEGIN_DATE <= prm_dt_range.DATE_BEGIN
+            AND (lt7.END_DATE IS NULL OR lt7.END_DATE >= prm_dt_range.DATE_BEGIN)
+  
+          UNION
+  
+          SELECT DISTINCT
+              kd_end.BORR_ID,
+              kd_end.KRED_DOG_ID,
+              lt10.VALUTA_ID
+          FROM  prm_dt_range,
+                kd_end
+                INNER JOIN
+                DWKR_02.KD_ISP_LATE_REST10_AE_5Y lt10
+                ON kd_end.BORR_ID = lt10.BORR_ID AND kd_end.KRED_DOG_ID = lt10.KRED_DOG_ID
+          WHERE lt10.BEGIN_DATE <= prm_dt_range.DATE_BEGIN
+            AND (lt10.END_DATE IS NULL OR lt10.END_DATE >= prm_dt_range.DATE_BEGIN)
+  
+          UNION
+  
+          SELECT DISTINCT
+              kd_end.BORR_ID,
+              kd_end.KRED_DOG_ID,
+              lt11.VALUTA_ID
+          FROM  prm_dt_range,
+                kd_end
+                INNER JOIN
+                DWKR_02.KD_ISP_LATE_REST11_AE_5Y lt11
+                ON kd_end.BORR_ID = lt11.BORR_ID AND kd_end.KRED_DOG_ID = lt11.KRED_DOG_ID
+          WHERE lt11.BEGIN_DATE <= prm_dt_range.DATE_BEGIN
+            AND (lt11.END_DATE IS NULL OR lt11.END_DATE >= prm_dt_range.DATE_BEGIN)
+       ) t
+       INNER JOIN
+       prm_crncy
+       ON prm_crncy.CURRENCY_ID = t.VALUTA_ID
+    ),
+    course AS
+    (
+      SELECT VALUTA_ALL_ID AS VALUTA_ID, SCALE, RATE, COURSE_DATE
+      FROM
+      (
+        SELECT cr.*,
+               ROW_NUMBER() OVER (PARTITION BY cr.VALUTA_ALL_ID
+                                  ORDER BY cr.COURSE_DATE DESC, cr.CREATE_DATE DESC) AS z
+          FROM prm_dt,
+               DWKR_02.COURSE_NBRB_MV cr
+          WHERE cr.COURSE_DATE < prm_dt.REPORTING_DATE
+      )
+      WHERE z=1
+      ORDER BY VALUTA_ALL_ID
+    )
+  SELECT 
+    L_REPORT_ID, -- REPORT_ID, --              NUMBER(38,0),
+    t2.BASIS_ACTIVITY_ID, -- BASIS_ACTIVITY_ID, --      NUMBER(38,0),
+    CASE
+      WHEN t2.BASIS_ACTIVITY_ID = 999
+        THEN ' '
+      ELSE ba.BASIS_ACTIVITY_CODE
+    END AS BASIS_ACTIVITY_CODE, --NULL, -- BASIS_ACTIVITY_CODE, --    VARCHAR(1),
+    t2.BANK_ID, -- BANK_ID, --                NUMBER(9, 0),
+    SUM(CASE WHEN KD_TERM_MONTHS_GROUP = 1 THEN MAIN_DEBT_BYN ELSE 0 END) AS MAIN_DEBT_BYN_KD_TERM_0M_1M, --    NUMBER(34,3),
+    SUM(CASE WHEN KD_TERM_MONTHS_GROUP = 3 THEN MAIN_DEBT_BYN ELSE 0 END) AS MAIN_DEBT_BYN_KD_TERM_1M_3M, --    NUMBER(34,3),
+    SUM(CASE WHEN KD_TERM_MONTHS_GROUP = 6 THEN MAIN_DEBT_BYN ELSE 0 END) AS MAIN_DEBT_BYN_KD_TERM_3M_6M, --    NUMBER(34,3),
+    SUM(CASE WHEN KD_TERM_MONTHS_GROUP = 12 THEN MAIN_DEBT_BYN ELSE 0 END) AS MAIN_DEBT_BYN_KD_TERM_6M_12M, --   NUMBER(34,3),
+    SUM(CASE WHEN KD_TERM_MONTHS_GROUP = 24 THEN MAIN_DEBT_BYN ELSE 0 END) AS MAIN_DEBT_BYN_KD_TERM_1Y_2Y, --    NUMBER(34,3),
+    SUM(CASE WHEN KD_TERM_MONTHS_GROUP = 36 THEN MAIN_DEBT_BYN ELSE 0 END) AS MAIN_DEBT_BYN_KD_TERM_2Y_3Y, --    NUMBER(34,3),
+    SUM(CASE WHEN KD_TERM_MONTHS_GROUP = 60 THEN MAIN_DEBT_BYN ELSE 0 END) AS MAIN_DEBT_BYN_KD_TERM_3Y_5Y, --    NUMBER(34,3),
+    SUM(CASE WHEN KD_TERM_MONTHS_GROUP = 61 THEN MAIN_DEBT_BYN ELSE 0 END) AS MAIN_DEBT_BYN_KD_TERM_MORE_5Y, --  NUMBER(34,3),
+    SUM(CASE WHEN KD_TERM_MONTHS_GROUP = 1000 THEN MAIN_DEBT_BYN ELSE 0 END) AS MAIN_DEBT_BYN_KD_TERM_IS_NULL, --  NUMBER(34,3),
+    SUM(CASE WHEN KD_TERM_MONTHS_GROUP = -1 THEN MAIN_DEBT_BYN ELSE 0 END) AS MAIN_DEBT_BYN_KD_TERM_LESS_0, --   NUMBER(34,3),
+    b.SHORT_NAME AS BANK_NAME, -- NULL, -- BANK_NAME, --              VARCHAR(100),
+    CASE
+      WHEN t2.BASIS_ACTIVITY_ID = 999
+        THEN 'Код ВЭД отсутствует'
+      WHEN t2.BASIS_ACTIVITY_ID IS NULL
+        THEN 'Итого, по всем видам деятельности'
+      ELSE ba.BASIS_ACTIVITY_NAME
+    END AS BASIS_ACTIVITY_NAME, --NULL, -- BASIS_ACTIVITY_CODE, --    VARCHAR(1),
+    NULL, -- CLIENT_CODE, --            NUMBER(1, 0),
+    NULL -- CLIENT_TYPE_NAME, --       VARCHAR(20),
+  FROM
+    (
+      SELECT  COALESCE(BASIS_ACTIVITY_ID,999) AS BASIS_ACTIVITY_ID,
+              BANK_ID,
+              KD_TERM_MONTHS_GROUP,
+              COUNT(*),
+              COUNT(DISTINCT KRED_DOG_ID),
+              COUNT(DISTINCT BORR_ID),
+              SUM(MAIN_DEBT_BYN) AS MAIN_DEBT_BYN
+      FROM
+      (
+        SELECT
+              kd_act_flt_cr.*,
+              kdf.END_DATE_OSN,
+              ((kdf.END_DATE_OSN - kd_act_flt_cr.KRED_DOG_DATE)+1) AS KD_TERM_DAYS,
+              ((kdf.END_DATE_OSN - prm_dt.REPORTING_DATE)+1) AS REMAINING_TERM_DAYS,
+              (MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, kd_act_flt_cr.KRED_DOG_DATE)) AS KD_TERM_MONTHS,
+               CASE
+                  WHEN MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) >=  0
+                   AND MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) <=  1
+                    THEN 1 -- '0M_1M'
+                  WHEN MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) >   1
+                   AND MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) <=  3
+                    THEN 3 -- '1M_3M'
+                  WHEN MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) >   3
+                   AND MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) <=  6
+                    THEN 6 -- '3M_6M'
+                  WHEN MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) >   6
+                   AND MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) <= 12
+                    THEN 12 -- '6M_12M'
+                  WHEN MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) >  12
+                   AND MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) <= 24
+                    THEN 24 -- '1Y_2Y'
+                  WHEN MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) >  24
+                   AND MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) <= 36
+                    THEN 36 -- '2Y_3Y'
+                  WHEN MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) >  36
+                   AND MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) <= 60
+                    THEN 60 -- '3Y_5Y'
+                  WHEN MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) >  60
+                    THEN 61 -- 'MORE_5Y'
+                  WHEN kdf.END_DATE_OSN IS NULL
+                    THEN 1000  -- 'EMPTY_TERM'
+                  WHEN MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, in_DATE) <   0
+                    THEN -1 -- 'LESS_0'
+               END AS KD_TERM_MONTHS_GROUP,
+              (MONTHS_BETWEEN(kdf.END_DATE_OSN + 1, prm_dt.REPORTING_DATE)) AS REMAINING_TERM_MONTHS,
+             -- (COALESCE(kdis_byn.REMAINING_DEBT,0) +
+             -- COALESCE(kdisf_byn.REMAINING_DEBT_FCTR_UNDSCL_SUM,0) +
+             -- COALESCE(lt1_byn.OVRD_REST_1,0) +
+             -- COALESCE(lt6_byn.OVRD_REST_6,0) +
+             -- COALESCE(lt7_byn.OVRD_REST_7,0) +
+             -- COALESCE(lt8_byn.OVRD_REST_8,0) +
+             -- COALESCE(lt10_byn.OVRD_REST_10,0) +
+             -- COALESCE(lt11_byn.OVRD_REST_11,0)) AS MAIN_DEBT_BYN
+              CASE
+                WHEN kd_act_flt_cr.KRED_TYPE_ID IN (1,2,3,10) THEN -- кредиты, коммерческие займы
+                  CASE
+                    WHEN kdis_byn.REMAINING_DEBT IS NULL AND lt1_byn.OVRD_REST_1 IS NULL THEN NULL
+                    ELSE COALESCE(kdis_byn.REMAINING_DEBT,0) + COALESCE(lt1_byn.OVRD_REST_1,0)
+                  END
+                WHEN kd_act_flt_cr.KRED_TYPE_ID IN (7) THEN -- лизинг
+                  CASE
+                    WHEN kdis_byn.REMAINING_DEBT IS NULL AND lt6_byn.OVRD_REST_6 IS NULL THEN NULL
+                    ELSE COALESCE(kdis_byn.REMAINING_DEBT,0) + COALESCE(lt6_byn.OVRD_REST_6,0)
+                  END
+                WHEN kd_act_flt_cr.KRED_TYPE_ID IN (8) THEN -- факторинг
+                  CASE
+					WHEN kdis_byn.REMAINING_DEBT IS NULL AND lt7_byn.OVRD_REST_7 IS NULL AND lt10_byn.OVRD_REST_10 IS NULL THEN NULL
+					ELSE COALESCE(kdis_byn.REMAINING_DEBT, 0)
+						+ COALESCE(lt7_byn.OVRD_REST_7, 0) -- у кредитора
+						+ COALESCE(lt10_byn.OVRD_REST_10, 0) -- у должника
+                  END
+                WHEN kd_act_flt_cr.KRED_TYPE_ID IN (9) THEN -- факторинговые операции
+                  CASE
+                   WHEN kdis_byn.REMAINING_DEBT IS NULL AND lt11_byn.OVRD_REST_11 IS NULL THEN NULL
+                    ELSE COALESCE(kdis_byn.REMAINING_DEBT,0) + COALESCE(lt11_byn.OVRD_REST_11,0)
+                  END
+              END AS MAIN_DEBT_BYN
+        FROM prm_dt,
+         ( SELECT DISTINCT kd_act.*
+           FROM kd_act
+                INNER JOIN
+                kd_act_crncy
+                ON kd_act.BORR_ID = kd_act_crncy.BORR_ID AND kd_act.KRED_DOG_ID = kd_act_crncy.KRED_DOG_ID
+         )
+         kd_act_flt_cr
+         LEFT OUTER JOIN
+         DWKR_02.KRED_DOG_FUTURE_AE kdf
+         ON kd_act_flt_cr.BORR_ID = kdf.BORR_ID AND kd_act_flt_cr.KRED_DOG_ID = kdf.KRED_DOG_ID
+    
+          LEFT OUTER JOIN
+----
+
+          FROM prm_dt_range,
+             ( SELECT DISTINCT kd_end.*
+               FROM kd_end
+                    INNER JOIN
+                    kd_end_crncy
+                    ON kd_end.BORR_ID = kd_end_crncy.BORR_ID AND kd_end.KRED_DOG_ID = kd_end_crncy.KRED_DOG_ID
+             )
+             kd_end_flt_cr
+             LEFT OUTER JOIN
+             DWKR_02.KRED_DOG_FUTURE_AE kdf
+             ON kd_end_flt_cr.BORR_ID = kdf.BORR_ID AND kd_end_flt_cr.KRED_DOG_ID = kdf.KRED_DOG_ID
+        
+              LEFT OUTER JOIN
+        
+              ( SELECT
+                    kd_end_crncy.BORR_ID,
+                    kd_end_crncy.KRED_DOG_ID,
+                    SUM(
+                        COALESCE(
+                          CASE
+                            WHEN COALESCE(kdis.VALUTA_ID,933)=933 OR COALESCE(kdis.OSTATOK_OSN,0)=0
+                              THEN kdis.OSTATOK_OSN
+                            ELSE ROUND(kdis.OSTATOK_OSN * course.RATE / course.SCALE, 3)
+                          END
+                        ,0)
+                    ) AS REMAINING_DEBT
+                FROM prm_dt_range,
+                     kd_end_crncy
+                    INNER JOIN
+                    DWKR_02.KD_ISP_SUM_AE_5Y kdis
+                    ON kd_end_crncy.BORR_ID = kdis.BORR_ID AND kd_end_crncy.KRED_DOG_ID = kdis.KRED_DOG_ID AND kd_end_crncy.VALUTA_ID = kdis.VALUTA_ID
+                    LEFT OUTER JOIN
+                    course
+                    ON kdis.VALUTA_ID = course.VALUTA_ID
+                WHERE kdis.BEGIN_DATE <= prm_dt_range.DATE_END
+                  AND (kdis.END_DATE IS NULL OR kdis.END_DATE >= prm_dt_range.DATE_END)
+                GROUP BY
+                    kd_end_crncy.BORR_ID,
+                    kd_end_crncy.KRED_DOG_ID
+              ) kdis_byn
+              ON kd_end_flt_cr.BORR_ID = kdis_byn.BORR_ID AND kd_end_flt_cr.KRED_DOG_ID = kdis_byn.KRED_DOG_ID
+        
+              LEFT OUTER JOIN
+        
+              ( SELECT
+                    kd_end_crncy.BORR_ID,
+                    kd_end_crncy.KRED_DOG_ID,
+                    SUM(
+                        COALESCE(
+                          CASE
+                            WHEN COALESCE(lt1.VALUTA_ID,933)=933 OR COALESCE(lt1.REST,0)=0
+                              THEN lt1.REST
+                            ELSE ROUND(lt1.REST * course.RATE / course.SCALE, 3)
+                          END
+                        ,0)
+                    ) AS OVRD_REST_1
+                FROM prm_dt_range,
+                     kd_end_crncy
+                    INNER JOIN
+                    DWKR_02.KD_ISP_LATE_REST1_AE_5Y lt1
+                    ON kd_end_crncy.BORR_ID = lt1.BORR_ID AND kd_end_crncy.KRED_DOG_ID = lt1.KRED_DOG_ID AND kd_end_crncy.VALUTA_ID = lt1.VALUTA_ID
+                    LEFT OUTER JOIN
+                    course
+                    ON lt1.VALUTA_ID = course.VALUTA_ID
+                WHERE lt1.BEGIN_DATE <= prm_dt_range.DATE_END
+                  AND (lt1.END_DATE IS NULL OR lt1.END_DATE >= prm_dt_range.DATE_END)
+                GROUP BY
+                    kd_end_crncy.BORR_ID,
+                    kd_end_crncy.KRED_DOG_ID
+              ) lt1_byn
+              ON kd_end_flt_cr.BORR_ID = lt1_byn.BORR_ID AND kd_end_flt_cr.KRED_DOG_ID = lt1_byn.KRED_DOG_ID
+        
+              LEFT OUTER JOIN
+        
+              ( SELECT
+                    kd_end_crncy.BORR_ID,
+                    kd_end_crncy.KRED_DOG_ID,
+                    SUM(
+                        COALESCE(
+                          CASE
+                            WHEN COALESCE(lt6.VALUTA_ID,933)=933 OR COALESCE(lt6.REST,0)=0
+                              THEN lt6.REST
+                            ELSE ROUND(lt6.REST * course.RATE / course.SCALE, 3)
+                          END
+                        ,0)
+                    ) AS OVRD_REST_6
+                FROM prm_dt_range,
+                     kd_end_crncy
+                    INNER JOIN
+                    DWKR_02.KD_ISP_LATE_REST6_AE_5Y lt6
+                    ON kd_end_crncy.BORR_ID = lt6.BORR_ID AND kd_end_crncy.KRED_DOG_ID = lt6.KRED_DOG_ID AND kd_end_crncy.VALUTA_ID = lt6.VALUTA_ID
+                    LEFT OUTER JOIN
+                    course
+                    ON lt6.VALUTA_ID = course.VALUTA_ID
+                WHERE lt6.BEGIN_DATE <= prm_dt_range.DATE_END
+                  AND (lt6.END_DATE IS NULL OR lt6.END_DATE >= prm_dt_range.DATE_END)
+                GROUP BY
+                    kd_end_crncy.BORR_ID,
+                    kd_end_crncy.KRED_DOG_ID
+              ) lt6_byn
+              ON kd_end_flt_cr.BORR_ID = lt6_byn.BORR_ID AND kd_end_flt_cr.KRED_DOG_ID = lt6_byn.KRED_DOG_ID
+        
+              LEFT OUTER JOIN
+        
+              ( SELECT
+                    kd_end_crncy.BORR_ID,
+                    kd_end_crncy.KRED_DOG_ID,
+                    SUM(
+                        COALESCE(
+                          CASE
+                            WHEN COALESCE(lt7.VALUTA_ID,933)=933 OR COALESCE(lt7.REST,0)=0
+                              THEN lt7.REST
+                            ELSE ROUND(lt7.REST * course.RATE / course.SCALE, 3)
+                          END
+                        ,0)
+                    ) AS OVRD_REST_7
+                FROM prm_dt_range,
+                     kd_end_crncy
+                    INNER JOIN
+                    DWKR_02.KD_ISP_LATE_REST7_AE_5Y lt7
+                    ON kd_end_crncy.BORR_ID = lt7.BORR_ID AND kd_end_crncy.KRED_DOG_ID = lt7.KRED_DOG_ID AND kd_end_crncy.VALUTA_ID = lt7.VALUTA_ID
+                    LEFT OUTER JOIN
+                    course
+                    ON lt7.VALUTA_ID = course.VALUTA_ID
+                 WHERE lt7.BEGIN_DATE <= prm_dt_range.DATE_END
+                   AND (lt7.END_DATE IS NULL OR lt7.END_DATE >= prm_dt_range.DATE_END)
+                GROUP BY
+                    kd_end_crncy.BORR_ID,
+                    kd_end_crncy.KRED_DOG_ID
+              ) lt7_byn
+              ON kd_end_flt_cr.BORR_ID = lt7_byn.BORR_ID AND kd_end_flt_cr.KRED_DOG_ID = lt7_byn.KRED_DOG_ID
+        
+              LEFT OUTER JOIN
+        
+              ( SELECT
+                    kd_end_crncy.BORR_ID,
+                    kd_end_crncy.KRED_DOG_ID,
+                    SUM(
+                        COALESCE(
+                          CASE
+                            WHEN COALESCE(lt10.VALUTA_ID,933)=933 OR COALESCE(lt10.REST,0)=0
+                              THEN lt10.REST
+                            ELSE ROUND(lt10.REST * course.RATE / course.SCALE, 3)
+                          END
+                        ,0)
+                    ) AS OVRD_REST_10
+                FROM prm_dt_range,
+                     kd_end_crncy
+                    INNER JOIN
+                    DWKR_02.KD_ISP_LATE_REST10_AE_5Y lt10
+                    ON kd_end_crncy.BORR_ID = lt10.BORR_ID AND kd_end_crncy.KRED_DOG_ID = lt10.KRED_DOG_ID AND kd_end_crncy.VALUTA_ID = lt10.VALUTA_ID
+                    LEFT OUTER JOIN
+                    course
+                    ON lt10.VALUTA_ID = course.VALUTA_ID
+                WHERE lt10.BEGIN_DATE <= prm_dt_range.DATE_END
+                  AND (lt10.END_DATE IS NULL OR lt10.END_DATE >= prm_dt_range.DATE_END)
+                GROUP BY
+                    kd_end_crncy.BORR_ID,
+                    kd_end_crncy.KRED_DOG_ID
+              ) lt10_byn
+              ON kd_end_flt_cr.BORR_ID = lt10_byn.BORR_ID AND kd_end_flt_cr.KRED_DOG_ID = lt10_byn.KRED_DOG_ID
+        
+              LEFT OUTER JOIN
+        
+              ( SELECT
+                    kd_end_crncy.BORR_ID,
+                    kd_end_crncy.KRED_DOG_ID,
+                    SUM(
+                        COALESCE(
+                          CASE
+                            WHEN COALESCE(lt11.VALUTA_ID,933)=933 OR COALESCE(lt11.REST,0)=0
+                              THEN lt11.REST
+                            ELSE ROUND(lt11.REST * course.RATE / course.SCALE, 3)
+                          END
+                        ,0)
+                    ) AS OVRD_REST_11
+                FROM prm_dt_range,
+                     kd_end_crncy
+                    INNER JOIN
+                    DWKR_02.KD_ISP_LATE_REST11_AE_5Y lt11
+                    ON kd_end_crncy.BORR_ID = lt11.BORR_ID AND kd_end_crncy.KRED_DOG_ID = lt11.KRED_DOG_ID AND kd_end_crncy.VALUTA_ID = lt11.VALUTA_ID
+                    LEFT OUTER JOIN
+                    course
+                    ON lt11.VALUTA_ID = course.VALUTA_ID
+                WHERE lt11.BEGIN_DATE <= prm_dt_range.DATE_END
+                  AND (lt11.END_DATE IS NULL OR lt11.END_DATE >= prm_dt_range.DATE_END)
+                GROUP BY
+                    kd_end_crncy.BORR_ID,
+                    kd_end_crncy.KRED_DOG_ID
+              ) lt11_byn
+              ON kd_end_flt_cr.BORR_ID = lt11_byn.BORR_ID AND kd_end_flt_cr.KRED_DOG_ID = lt11_byn.KRED_DOG_ID
+        
+          WHERE kdf.BEGIN_DATE <= prm_dt_range.DATE_END
+            AND (kdf.END_DATE IS NULL OR kdf.END_DATE >= prm_dt_range.DATE_END)
+        
+        ) kd_end_debt
+        
+        LEFT OUTER JOIN
+        
+        (
+        
+        SELECT
+            kd_begin_flt_cr.BASIS_ACTIVITY_ID,
+            kd_begin_flt_cr.BORR_ID,
+            kd_begin_flt_cr.KRED_DOG_ID,
+            kd_begin_flt_cr.BANK_ID,
+            kd_begin_flt_cr.KRED_TYPE_ID,
+            kd_begin_flt_cr.KRED_TYPE_VID_ID,
+            kd_begin_flt_cr.KRED_DOG_DATE,
+            kd_begin_flt_cr.KRED_DOG_END_DATE,
+            kd_begin_flt_cr.TOTAL_END_DATE,
+            kdf.END_DATE_OSN AS PERFORMANCE_DATE,
+            kdis_byn.REMAINING_DEBT,
+            -- kdisf_byn.REMAINING_DEBT_FCTR_UNDSCL_SUM,
+            lt1_byn.OVRD_REST_1,
+            lt6_byn.OVRD_REST_6,
+            lt7_byn.OVRD_REST_7,
+            -- lt8_byn.OVRD_REST_8,
+            lt10_byn.OVRD_REST_10,
+            lt11_byn.OVRD_REST_11,
+            /*
+            (COALESCE(kdis_byn.REMAINING_DEBT,0) +
+            COALESCE(kdisf_byn.REMAINING_DEBT_FCTR_UNDSCL_SUM,0) +
+            COALESCE(lt1_byn.OVRD_REST_1,0) +
+            COALESCE(lt6_byn.OVRD_REST_6,0) +
+            COALESCE(lt7_byn.OVRD_REST_7,0) +
+            COALESCE(lt8_byn.OVRD_REST_8,0) +
+            COALESCE(lt10_byn.OVRD_REST_10,0) +
+            COALESCE(lt11_byn.OVRD_REST_11,0)) AS MAIN_DEBT_BYN
+            */
+            CASE
+              WHEN kd_begin_flt_cr.KRED_TYPE_ID IN (1,2,3,10) THEN -- кредиты
+                CASE
+                  WHEN kdis_byn.REMAINING_DEBT IS NULL AND lt1_byn.OVRD_REST_1 IS NULL THEN NULL
+                  ELSE COALESCE(kdis_byn.REMAINING_DEBT,0) + COALESCE(lt1_byn.OVRD_REST_1,0)
+                END
+              WHEN kd_begin_flt_cr.KRED_TYPE_ID IN (7) THEN -- лизинг
+                CASE
+                  WHEN kdis_byn.REMAINING_DEBT IS NULL AND lt6_byn.OVRD_REST_6 IS NULL THEN NULL
+                  ELSE COALESCE(kdis_byn.REMAINING_DEBT,0) + COALESCE(lt6_byn.OVRD_REST_6,0)
+                END
+              WHEN kd_begin_flt_cr.KRED_TYPE_ID IN (8) THEN -- факторинг
+                CASE
+                  WHEN kdis_byn.REMAINING_DEBT IS NULL AND lt7_byn.OVRD_REST_7 IS NULL AND lt10_byn.OVRD_REST_10 IS NULL THEN NULL
+                  ELSE COALESCE(kdis_byn.REMAINING_DEBT, 0)
+                      + COALESCE(lt7_byn.OVRD_REST_7, 0) -- у кредитора
+                      + COALESCE(lt10_byn.OVRD_REST_10, 0) -- у должника
+                END
+              WHEN kd_begin_flt_cr.KRED_TYPE_ID IN (9) THEN -- факторинговые операции
+                CASE
+                  WHEN kdis_byn.REMAINING_DEBT IS NULL AND lt11_byn.OVRD_REST_11 IS NULL THEN NULL
+                  ELSE COALESCE(kdis_byn.REMAINING_DEBT,0) + COALESCE(lt11_byn.OVRD_REST_11,0)
+                END
+            END AS MAIN_DEBT_BYN
+        FROM prm_dt_range,
+             ( SELECT DISTINCT kd_begin.*
+               FROM kd_begin
+                    INNER JOIN
+                    kd_begin_crncy
+                    ON kd_begin.BORR_ID = kd_begin_crncy.BORR_ID AND kd_begin.KRED_DOG_ID = kd_begin_crncy.KRED_DOG_ID
+             )
+             kd_begin_flt_cr
+             LEFT OUTER JOIN
+             DWKR_02.KRED_DOG_FUTURE_AE kdf
+             ON kd_begin_flt_cr.BORR_ID = kdf.BORR_ID AND kd_begin_flt_cr.KRED_DOG_ID = kdf.KRED_DOG_ID
+        
+              LEFT OUTER JOIN
+        
+              ( SELECT
+                    kd_begin_crncy.BORR_ID,
+                    kd_begin_crncy.KRED_DOG_ID,
+                    SUM(
+                        COALESCE(
+                          CASE
+                            WHEN COALESCE(kdis.VALUTA_ID,933)=933 OR COALESCE(kdis.OSTATOK_OSN,0)=0
+                              THEN kdis.OSTATOK_OSN
+                            ELSE ROUND(kdis.OSTATOK_OSN * course.RATE / course.SCALE, 3)
+                          END
+                        ,0)
+                    ) AS REMAINING_DEBT
+                FROM prm_dt_range,
+                     kd_begin_crncy
+                    INNER JOIN
+                    DWKR_02.KD_ISP_SUM_AE_5Y kdis
+                    ON kd_begin_crncy.BORR_ID = kdis.BORR_ID AND kd_begin_crncy.KRED_DOG_ID = kdis.KRED_DOG_ID AND kd_begin_crncy.VALUTA_ID = kdis.VALUTA_ID
+                    LEFT OUTER JOIN
+                    course
+                    ON kdis.VALUTA_ID = course.VALUTA_ID
+                WHERE kdis.BEGIN_DATE <= prm_dt_range.DATE_BEGIN
+                  AND (kdis.END_DATE IS NULL OR kdis.END_DATE >= prm_dt_range.DATE_BEGIN)
+                GROUP BY
+                    kd_begin_crncy.BORR_ID,
+                    kd_begin_crncy.KRED_DOG_ID
+              ) kdis_byn
+              ON kd_begin_flt_cr.BORR_ID = kdis_byn.BORR_ID AND kd_begin_flt_cr.KRED_DOG_ID = kdis_byn.KRED_DOG_ID
+        
+              LEFT OUTER JOIN
+        
+              ( SELECT
+                    kd_begin_crncy.BORR_ID,
+                    kd_begin_crncy.KRED_DOG_ID,
+                    SUM(
+                        COALESCE(
+                          CASE
+                            WHEN COALESCE(lt1.VALUTA_ID,933)=933 OR COALESCE(lt1.REST,0)=0
+                              THEN lt1.REST
+                            ELSE ROUND(lt1.REST * course.RATE / course.SCALE, 3)
+                          END
+                        ,0)
+                    ) AS OVRD_REST_1
+                FROM prm_dt_range,
+                     kd_begin_crncy
+                    INNER JOIN
+                    DWKR_02.KD_ISP_LATE_REST1_AE_5Y lt1
+                    ON kd_begin_crncy.BORR_ID = lt1.BORR_ID AND kd_begin_crncy.KRED_DOG_ID = lt1.KRED_DOG_ID AND kd_begin_crncy.VALUTA_ID = lt1.VALUTA_ID
+                    LEFT OUTER JOIN
+                    course
+                    ON lt1.VALUTA_ID = course.VALUTA_ID
+                WHERE lt1.BEGIN_DATE <= prm_dt_range.DATE_BEGIN
+                  AND (lt1.END_DATE IS NULL OR lt1.END_DATE >= prm_dt_range.DATE_BEGIN)
+                GROUP BY
+                    kd_begin_crncy.BORR_ID,
+                    kd_begin_crncy.KRED_DOG_ID
+              ) lt1_byn
+              ON kd_begin_flt_cr.BORR_ID = lt1_byn.BORR_ID AND kd_begin_flt_cr.KRED_DOG_ID = lt1_byn.KRED_DOG_ID
+        
+              LEFT OUTER JOIN
+        
+              ( SELECT
+                    kd_begin_crncy.BORR_ID,
+                    kd_begin_crncy.KRED_DOG_ID,
+                    SUM(
+                        COALESCE(
+                          CASE
+                            WHEN COALESCE(lt6.VALUTA_ID,933)=933 OR COALESCE(lt6.REST,0)=0
+                              THEN lt6.REST
+                            ELSE ROUND(lt6.REST * course.RATE / course.SCALE, 3)
+                          END
+                        ,0)
+                    ) AS OVRD_REST_6
+                FROM prm_dt_range,
+                     kd_begin_crncy
+                    INNER JOIN
+                    DWKR_02.KD_ISP_LATE_REST6_AE_5Y lt6
+                    ON kd_begin_crncy.BORR_ID = lt6.BORR_ID AND kd_begin_crncy.KRED_DOG_ID = lt6.KRED_DOG_ID AND kd_begin_crncy.VALUTA_ID = lt6.VALUTA_ID
+                    LEFT OUTER JOIN
+                    course
+                    ON lt6.VALUTA_ID = course.VALUTA_ID
+                WHERE lt6.BEGIN_DATE <= prm_dt_range.DATE_BEGIN
+                  AND (lt6.END_DATE IS NULL OR lt6.END_DATE >= prm_dt_range.DATE_BEGIN)
+                GROUP BY
+                    kd_begin_crncy.BORR_ID,
+                    kd_begin_crncy.KRED_DOG_ID
+              ) lt6_byn
+              ON kd_begin_flt_cr.BORR_ID = lt6_byn.BORR_ID AND kd_begin_flt_cr.KRED_DOG_ID = lt6_byn.KRED_DOG_ID
+        
+              LEFT OUTER JOIN
+        
+              ( SELECT
+                    kd_begin_crncy.BORR_ID,
+                    kd_begin_crncy.KRED_DOG_ID,
+                    SUM(
+                        COALESCE(
+                          CASE
+                            WHEN COALESCE(lt7.VALUTA_ID,933)=933 OR COALESCE(lt7.REST,0)=0
+                              THEN lt7.REST
+                            ELSE ROUND(lt7.REST * course.RATE / course.SCALE, 3)
+                          END
+                        ,0)
+                    ) AS OVRD_REST_7
+                FROM prm_dt_range,
+                     kd_begin_crncy
+                    INNER JOIN
+                    DWKR_02.KD_ISP_LATE_REST7_AE_5Y lt7
+                    ON kd_begin_crncy.BORR_ID = lt7.BORR_ID AND kd_begin_crncy.KRED_DOG_ID = lt7.KRED_DOG_ID AND kd_begin_crncy.VALUTA_ID = lt7.VALUTA_ID
+                    LEFT OUTER JOIN
+                    course
+                    ON lt7.VALUTA_ID = course.VALUTA_ID
+                 WHERE lt7.BEGIN_DATE <= prm_dt_range.DATE_BEGIN
+                   AND (lt7.END_DATE IS NULL OR lt7.END_DATE >= prm_dt_range.DATE_BEGIN)
+                GROUP BY
+                    kd_begin_crncy.BORR_ID,
+                    kd_begin_crncy.KRED_DOG_ID
+              ) lt7_byn
+              ON kd_begin_flt_cr.BORR_ID = lt7_byn.BORR_ID AND kd_begin_flt_cr.KRED_DOG_ID = lt7_byn.KRED_DOG_ID
+        
+              LEFT OUTER JOIN
+        
+              ( SELECT
+                    kd_begin_crncy.BORR_ID,
+                    kd_begin_crncy.KRED_DOG_ID,
+                    SUM(
+                        COALESCE(
+                          CASE
+                            WHEN COALESCE(lt10.VALUTA_ID,933)=933 OR COALESCE(lt10.REST,0)=0
+                              THEN lt10.REST
+                            ELSE ROUND(lt10.REST * course.RATE / course.SCALE, 3)
+                          END
+                        ,0)
+                    ) AS OVRD_REST_10
+                FROM prm_dt_range,
+                     kd_begin_crncy
+                    INNER JOIN
+                    DWKR_02.KD_ISP_LATE_REST10_AE_5Y lt10
+                    ON kd_begin_crncy.BORR_ID = lt10.BORR_ID AND kd_begin_crncy.KRED_DOG_ID = lt10.KRED_DOG_ID AND kd_begin_crncy.VALUTA_ID = lt10.VALUTA_ID
+                    LEFT OUTER JOIN
+                    course
+                    ON lt10.VALUTA_ID = course.VALUTA_ID
+                WHERE lt10.BEGIN_DATE <= prm_dt_range.DATE_BEGIN
+                  AND (lt10.END_DATE IS NULL OR lt10.END_DATE >= prm_dt_range.DATE_BEGIN)
+                GROUP BY
+                    kd_begin_crncy.BORR_ID,
+                    kd_begin_crncy.KRED_DOG_ID
+              ) lt10_byn
+              ON kd_begin_flt_cr.BORR_ID = lt10_byn.BORR_ID AND kd_begin_flt_cr.KRED_DOG_ID = lt10_byn.KRED_DOG_ID
+        
+              LEFT OUTER JOIN
+        
+              ( SELECT
+                    kd_begin_crncy.BORR_ID,
+                    kd_begin_crncy.KRED_DOG_ID,
+                    SUM(
+                        COALESCE(
+                          CASE
+                            WHEN COALESCE(lt11.VALUTA_ID,933)=933 OR COALESCE(lt11.REST,0)=0
+                              THEN lt11.REST
+                            ELSE ROUND(lt11.REST * course.RATE / course.SCALE, 3)
+                          END
+                        ,0)
+                    ) AS OVRD_REST_11
+                FROM prm_dt_range,
+                     kd_begin_crncy
+                    INNER JOIN
+                    DWKR_02.KD_ISP_LATE_REST11_AE_5Y lt11
+                    ON kd_begin_crncy.BORR_ID = lt11.BORR_ID AND kd_begin_crncy.KRED_DOG_ID = lt11.KRED_DOG_ID AND kd_begin_crncy.VALUTA_ID = lt11.VALUTA_ID
+                    LEFT OUTER JOIN
+                    course
+                    ON lt11.VALUTA_ID = course.VALUTA_ID
+                WHERE lt11.BEGIN_DATE <= prm_dt_range.DATE_BEGIN
+                  AND (lt11.END_DATE IS NULL OR lt11.END_DATE >= prm_dt_range.DATE_BEGIN)
+                GROUP BY
+                    kd_begin_crncy.BORR_ID,
+                    kd_begin_crncy.KRED_DOG_ID
+              ) lt11_byn
+              ON kd_begin_flt_cr.BORR_ID = lt11_byn.BORR_ID AND kd_begin_flt_cr.KRED_DOG_ID = lt11_byn.KRED_DOG_ID
+        
+          WHERE kdf.BEGIN_DATE <= prm_dt_range.DATE_BEGIN
+            AND (kdf.END_DATE IS NULL OR kdf.END_DATE >= prm_dt_range.DATE_BEGIN)
+        
+        ) kd_begin_debt
+        ON kd_begin_debt.BORR_ID = kd_end_debt.BORR_ID AND kd_begin_debt.KRED_DOG_ID = kd_end_debt.KRED_DOG_ID
+        WHERE COALESCE(kd_begin_debt.MAIN_DEBT_BYN,0) < COALESCE(kd_end_debt.MAIN_DEBT_BYN,0)
+        ORDER BY kd_end_debt.BORR_ID, kd_end_debt.KRED_DOG_ID
+        
+        GROUP BY BASIS_ACTIVITY_ID, BANK_ID, KD_TERM_MONTHS_GROUP
+      ORDER BY BASIS_ACTIVITY_ID, BANK_ID, KD_TERM_MONTHS_GROUP
+    ) t2
+    LEFT OUTER JOIN
+    DWKR_02.V_BANK b
+    ON t2.BANK_ID = b.BANK_ID
+    LEFT OUTER JOIN
+    DWKR_02.V_BASIS_ACTIVITY ba
+    ON t2.BASIS_ACTIVITY_ID = ba.BASIS_ACTIVITY_ID
+  GROUP BY GROUPING SETS ( (t2.BASIS_ACTIVITY_ID, ba.BASIS_ACTIVITY_CODE, ba.BASIS_ACTIVITY_NAME, t2.BANK_ID, b.SHORT_NAME),
+                           (t2.BASIS_ACTIVITY_ID, ba.BASIS_ACTIVITY_CODE, ba.BASIS_ACTIVITY_NAME),
+                           ()
+                         )
+  ORDER BY t2.BASIS_ACTIVITY_ID, t2.BANK_ID
+;
+
+  --------------------------------------------------------
+  UPDATE DWKR_02.REPORT
+  SET FINISH_TIME = SYSTIMESTAMP
+  WHERE REPORT_ID = L_REPORT_ID;
+
+  COMMIT;
+  
+  OUT_REPORT_ID := L_REPORT_ID;
+
+  DWKR_02.PROC_LOG_REPORT(FILE_NAME => '_DWKR_02.REPORT_FS10.PROC_FS10',LOG_STR => SYSTIMESTAMP||' OUT_REPORT_ID = ' || OUT_REPORT_ID);
+  DWKR_02.PROC_LOG_REPORT(FILE_NAME => '_DWKR_02.REPORT_FS10.PROC_FS10',LOG_STR => SYSTIMESTAMP||' Finished');
+
+END PROC_FS10;
+
+
+END REPORT_FS10;
+/
+
+SHOW ERRORS;
