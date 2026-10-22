@@ -1,52 +1,70 @@
-CREATE OR REPLACE
-PACKAGE BODY DWKR_02.REPORT_FS10 AS
+import requests
+import base64
+import sys
 
-  FUNCTION GET_FS10_RESULT(IN_REPORT_ID NUMBER)
-           RETURN REPORT_FS10_RESULT_TBL_TP
-    PIPELINED
-    IS
-      CURSOR cur IS
-        SELECT
-          ID,
-          REPORT_ID, --              NUMBER(38,0),
-          RISK_GROUP_ID_BEGIN, --	  NUMBER(38,0),
-          BANK_ID, --                NUMBER(9, 0),
-          CLIENT_CODE, --            NUMBER(1, 0),
-          BASIS_ACTIVITY_ID, --      NUMBER(38,0),
-          BASIS_ACTIVITY_CODE, --    VARCHAR(1),
-          ROUND(MAIN_DEBT_BYN_RISK_GROUP_1_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_1_END, --    NUMBER(34,3),
-          ROUND(MAIN_DEBT_BYN_RISK_GROUP_2_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_2_END, --    NUMBER(34,3),
-          ROUND(MAIN_DEBT_BYN_RISK_GROUP_3_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_3_END, --    NUMBER(34,3),
-          ROUND(MAIN_DEBT_BYN_RISK_GROUP_4_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_4_END, --    NUMBER(34,3),
-          ROUND(MAIN_DEBT_BYN_RISK_GROUP_5_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_5_END, --    NUMBER(34,3),
-          ROUND(MAIN_DEBT_BYN_RISK_GROUP_6_END/1000, 1) AS MAIN_DEBT_BYN_RISK_GROUP_6_END, --    NUMBER(34,3),
-          RISK_GROUP_NAME_BEGIN, --  VARCHAR2(250),
-          BANK_NAME, --              VARCHAR(255),
-          CLIENT_TYPE_NAME, --       VARCHAR(20),
-          BASIS_ACTIVITY_NAME --    VARCHAR(255)
-        FROM DWKR_02.REPORT_FS10_RESULT
-        WHERE REPORT_ID = IN_REPORT_ID
-        ORDER BY ID;
+GITHUB_TOKEN = "ghp"
+OWNER = "IRLBeast"
+REPO = "templates"
+FILE_PATH = "styles"
+BRANCH = "main"
 
-  BEGIN
-
-    FOR rec IN cur
-    LOOP
-      PIPE ROW(rec);
-    END LOOP;
-    RETURN;
-
-  END GET_FS10_RESULT;
+LOCAL_FILE = "local.txt"
 
 
-PROCEDURE PROC_FS10
-/*
-  Процедура выполняет отчет FS10 - 
-  Конечная цель процедуры - формирование таблиц DWKR_02.FS10_RESULT
-*/
- (
-    in_DATE_RANGE_BEGIN DATE, -- Начальная дата диапазона
-    in_DATE_RANGE_END DATE,   -- Конечная дата диапазона
-    in_MIN_CONTRACT_TERM IN NUMBER, -- Минимальный срок действия договора (количество лет)
-    in_MAX_CONTRACT_TERM IN NUMBER, -- Максимальный срок действия договора (количество лет)
-    in_MIN_CONTRACT_EXPIRATION_TERM IN NUMBER, -- Минимальный оставшийся срок до конца срока действия договора (количество лет)
+def get_file():
+    url = f"https://api.github.com/repos/{OWNER}/{REPO}/contents/{FILE_PATH}"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+
+    r = requests.get(url, headers=headers, verify=False)
+    r.raise_for_status()
+    data = r.json()
+
+    sha = data["sha"]
+    content = base64.b64decode(data["content"]).decode("utf-8")
+
+    #  sha 
+    with open(".sha", "w") as f:
+        f.write(sha)
+
+    with open(LOCAL_FILE, "w") as f:
+        f.write(content)
+
+    print("  ", LOCAL_FILE)
+
+
+def put_file():
+    url = f"https://api.github.com/repos/{OWNER}/{REPO}/contents/{FILE_PATH}"
+    headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+
+    with open(LOCAL_FILE, "r", encoding = "utf-8", errors="ignore") as f:
+        content = f.read()
+
+    with open(".sha") as f:
+        sha = f.read()
+
+    encoded = base64.b64encode(content.encode()).decode()
+
+    payload = {
+        "message": "Update via script",
+        "content": encoded,
+        "sha": sha,
+        "branch": BRANCH
+    }
+
+    r = requests.put(url, headers=headers, json=payload, verify=False)
+    r.raise_for_status()
+
+    print(" ")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print(": get  put")
+        sys.exit(1)
+
+    if sys.argv[1] == "get":
+        get_file()
+    elif sys.argv[1] == "put":
+        put_file()
+    else:
+        print(" ")
