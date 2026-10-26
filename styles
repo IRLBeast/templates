@@ -1,1 +1,17 @@
-SELECT "CdErrorIn" FROM {schema}."MessageInMX" WHERE "BizMsgIdr" = ?;
+def get_connection(db_type="main"):
+    if db_type == "smp":
+        database = os.getenv("SMP_DB_MAINFRAME_2B_NAME")
+        host = os.getenv("SMP_DB_HOST")
+        port = os.getenv("SMP_DB_PORT")
+        user = os.getenv("DB_USER_SMP")
+
+    conn_str = (
+        f"DATABASE={database};"
+        f"HOSTNAME={host};"
+        f"PORT={port};"
+        "PROTOCOL=TCPIP;"
+        f"UID={user};"
+        f"PWD={os.getenv('DB_PASSWORD_BISS')};"
+    )
+
+    return ibm_db.connect(conn_str, "", "")
