@@ -1,10 +1,9 @@
-https://habr.com/ru/companies/beget/articles/1087732/?utm_source=telegram_habr&utm_medium=social&utm_campaign=32778923
+https://u.habr.com/V105n
 
+https://u.habr.com/sXGBN
 
-https://u.habr.com/CjqLV
+https://u.habr.com/hdWL8
 
+https://u.habr.com/iLD7P
 
-https://u.habr.com/xucgc
-
-
-https://u.habr.com/xmwka
+https://u.habr.com/EHikF
