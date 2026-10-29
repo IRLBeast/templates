@@ -1,11 +1,37 @@
-STATIC_URL = 'static/'
+import os
+from pathlib import Path
+import pymqi
 
-source venv/bin/activate
-python manage.py collectstatic
 
-django.core.exceptions.ImproperlyConfigured: You're using the staticfiles app without having set the STATIC_ROOT setting to a filesystem path.
+os.environ["MQCHLLIB"] = r"C:\Program Files\IBM\MQ"
+os.environ["MQCHLTAB"] = "amqclchl.TAB"
 
-PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
-STATIC_ROOT = os.path.join(PROJECT_DIR, 'static')
+QM_NAME = "MQ10"
+QUEUE_NAME = "MX.IPSSRV01.FROM_PAY.LQ"
 
-STATIC_URL = 'static/'
+XML_FILE = Path(r"D:\autotest\docs\смп_Z00_3012_3600.xml")
+
+
+def send_xml():
+    xml = XML_FILE.read_text(encoding="utf-8")
+
+    try:
+        qmgr = pymqi.connect(QM_NAME)
+
+        queue = pymqi.Queue(qmgr, QUEUE_NAME)
+
+        queue.put(xml.encode("utf-8"))
+
+        print("XML успешно отправлен!")
+
+    except pymqi.MQMIError as e:
+        print("Ошибка IBM MQ")
+        print("Reason code:", e.reason)
+        print(e)
+
+    except Exception as e:
+        print("Ошибка Python")
+        print(type(e).__name__, e)
+
+if __name__ == "__main__":
+    send_xml()
