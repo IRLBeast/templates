@@ -1,82 +1,126 @@
-During handling of the above exception, another exception occurred:
+Проблема понятна. ibmmq установлена в виртуальное окружение Django, но при импорте Python не может найти системную библиотеку IBM MQ libmqm_r.so.
 
-Traceback (most recent call last):
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/ibmmq/__init__.py", line 124, in <module>
-    from . import ibmmqc  # type: ignore
-    ^^^^^^^^^^^^^^^^^^^^
-ImportError: libmqm_r.so: cannot open shared object file: No such file or directory
+Это не ошибка твоей функции отправки XML и не проблема Django как такового. Скорее всего, библиотека IBM MQ не доступна динамическому загрузчику в процессе Gunicorn.
 
-During handling of the above exception, another exception occurred:
+У тебя IBM MQ Client находится в /opt/mqm/redist, а проект запускается через systemd/Gunicorn. Даже если ты выполняла export LD_LIBRARY_PATH=... в терминале, это не гарантирует, что переменная доступна Gunicorn.
 
-Traceback (most recent call last):
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/gunicorn/workers/gthread.py", line 479, in handle
-    keepalive = self.handle_request(req, conn)
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/gunicorn/workers/gthread.py", line 678, in handle_request
-    respiter = self.wsgi(environ, resp.start_response)
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/core/handlers/wsgi.py", line 124, in __call__
-    response = self.get_response(request)
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/core/handlers/base.py", line 141, in get_response
-    response = self._middleware_chain(request)
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/core/handlers/exception.py", line 57, in inner
-    response = response_for_exception(request, exc)
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/core/handlers/exception.py", line 141, in response_for_exception
-    response = handle_uncaught_exception(
-        request, get_resolver(get_urlconf()), sys.exc_info()
-    )
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/core/handlers/exception.py", line 182, in handle_uncaught_exception
-    return debug.technical_500_response(request, *exc_info)
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/views/decorators/csp.py", line 21, in _wrapped_sync_view
-    response = view_func(request, *args, **kwargs)
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/views/decorators/csp.py", line 21, in _wrapped_sync_view
-    response = view_func(request, *args, **kwargs)
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/views/debug.py", line 73, in technical_500_response
-    html = reporter.get_traceback_html()
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/views/debug.py", line 435, in get_traceback_html
-    c = Context(self.get_traceback_data(), use_l10n=False)
-                ~~~~~~~~~~~~~~~~~~~~~~~^^
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/views/debug.py", line 416, in get_traceback_data
-    c["raising_view_name"] = get_caller(self.request)
-                             ~~~~~~~~~~^^^^^^^^^^^^^^
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/views/debug.py", line 106, in get_caller
-    resolver_match = resolve(request.path)
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/urls/base.py", line 25, in resolve
-    return get_resolver(urlconf).resolve(path)
-           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/urls/resolvers.py", line 676, in resolve
-    for pattern in self.url_patterns:
-                   ^^^^^^^^^^^^^^^^^
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/utils/functional.py", line 47, in __get__
-    res = instance.__dict__[self.name] = self.func(instance)
-                                         ~~~~~~~~~^^^^^^^^^^
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/urls/resolvers.py", line 729, in url_patterns
-    patterns = getattr(self.urlconf_module, "urlpatterns", self.urlconf_module)
-                       ^^^^^^^^^^^^^^^^^^^
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/utils/functional.py", line 47, in __get__
-    res = instance.__dict__[self.name] = self.func(instance)
-                                         ~~~~~~~~~^^^^^^^^^^
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/urls/resolvers.py", line 722, in urlconf_module
-    return import_module(self.urlconf_name)
-  File "/usr/lib/python3.13/importlib/__init__.py", line 88, in import_module
-    return _bootstrap._gcd_import(name[level:], package, level)
-           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
-  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
-  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
-  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
-  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
-  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/config/urls.py", line 3, in <module>
-    from tests_manager.views import (run_test, index, aiskr, asubs, asbdb, rinok, isip, smp,
-    ...<2 lines>...
-                                     get_smp_outgoing_message, get_smp_messages_admin, get_smp_message_admin, smp_sender)
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/tests_manager/views.py", line 13, in <module>
-    from tests.smp.send_m import prepare_pacs008
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/tests/smp/send_m.py", line 3, in <module>
-    from tests.smp.smp_file_send import get_optional_tag_value
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/tests/smp/smp_file_send.py", line 3, in <module>
-    import ibmmq
-  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/ibmmq/__init__.py", line 126, in <module>
-    import ibmmqc  # type: ignore  # Backward compatibility
-    ^^^^^^^^^^^^^
-ModuleNotFoundError: No module named 'ibmmqc'
+Давай проверим причину и исправим её без переустановки Python-пакетов и без изменения кода отправки.
+
+1. Проверяем, где находится libmqm_r.so
+
+Выполни на сервере:
+
+find /opt/mqm/redist -name 'libmqm_r.so*' -ls
+
+Затем:
+
+ls -ld /opt/mqm/redist/lib64
+
+Если файл существует, например:
+
+/opt/mqm/redist/lib64/libmqm_r.so
+
+значит, библиотека присутствует и нужно настроить её поиск.
+
+Если find ничего не выведет, сначала нужно выяснить, почему в распакованном дистрибутиве нет этого файла: возможно, используется другой состав пакета или библиотека расположена в другом каталоге.
+
+2. Проверяем, видит ли библиотеку системный загрузчик
+
+Выполни:
+
+ldconfig -p | grep 'libmqm_r.so'
+
+Если ничего не выведет, это ещё не доказывает отсутствие файла: библиотека может быть доступна через LD_LIBRARY_PATH, но не зарегистрирована в системном кэше.
+
+Проверь переменную окружения:
+
+echo "$LD_LIBRARY_PATH"
+
+И запусти Python с явно заданным путём:
+
+LD_LIBRARY_PATH=/opt/mqm/redist/lib64 \
+/home/stendadm@rc.nbrb.by/autotest_prod/venv/bin/python \
+-c "import ibmmq; print('ibmmq imported successfully')"
+
+Если импорт заработает, причина почти наверняка в окружении, с которым запускается Gunicorn.
+
+Если не заработает, выполни:
+
+find /opt/mqm/redist -name 'ibmmqc*.so' -o -name 'libmqm_r.so*'
+
+После этого, если найдёшь файл расширения ibmmqc, проверь его зависимости:
+
+ldd /home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/ibmmq/ibmmqc*.so
+
+Если ldd сообщит not found, мы увидим, какие именно библиотеки не удаётся найти.
+
+IBM описывает загрузку библиотек MQ через LD_LIBRARY_PATH и setmqenv в своей документации по загрузке библиотек IBM MQ.
+
+3. Исправляем окружение Gunicorn
+
+Если импорт с явно заданным LD_LIBRARY_PATH заработал, нужно добавить переменную в конфигурацию службы, которая запускает Django.
+
+Сначала найди имя службы:
+
+systemctl list-units --type=service | grep -i gunicorn
+
+Допустим, твоя служба называется gunicorn.service. Тогда посмотри её настройки:
+
+sudo systemctl cat gunicorn.service
+
+Не создавай новый сервис и не меняй ExecStart. Нужно дополнить существующую конфигурацию.
+
+Открой файл службы:
+
+sudo systemctl edit gunicorn.service
+
+Добавь:
+
+[Service]
+Environment="MQ_FILE_PATH=/opt/mqm/redist"
+Environment="MQCHLLIB=/home/stendadm@rc.nbrb.by/IBM/MQ/data"
+Environment="MQCHLTAB=amqclchl.TAB"
+Environment="LD_LIBRARY_PATH=/opt/mqm/redist/lib64"
+
+Если в исходной службе уже задан LD_LIBRARY_PATH, сохрани и остальные необходимые пути, добавив /opt/mqm/redist/lib64. Не затирай существующие значения, если приложение зависит от других библиотек.
+
+Сохрани файл и выйди из редактора.
+
+Затем выполни:
+
+sudo systemctl daemon-reload
+sudo systemctl restart gunicorn.service
+sudo systemctl status gunicorn.service
+
+Если служба называется иначе, замени gunicorn.service на её настоящее имя.
+
+Важный нюанс с setmqenv
+
+Ты ранее выполняла:
+
+source /opt/mqm/redist/bin/setmqenv -s
+
+Но настройки из твоего терминала не переносятся автоматически в systemd. Кроме того, IBM указывает, что для добавления путей библиотек в LD_LIBRARY_PATH у setmqenv предусмотрены параметры -k и -l. Подробнее: [Документация IBM — setmqenv](https://www.ibm.com/docs/SSFKSJ_9.2.0/com.ibm.mq.ref.adm.doc/q083560_.htm?utm_source=chatgpt.com).
+
+Поэтому для начала проще проверить явно заданный путь, как мы сделали выше, и убедиться, что библиотека действительно загружается.
+
+
+---
+
+4. Проверяем результат
+
+После перезапуска Gunicorn открой страницу проекта, на которой возникала ошибка.
+
+Если она повторится, посмотри последние сообщения службы:
+
+sudo journalctl -u gunicorn.service -n 100 --no-pager
+
+Что мне нужно от тебя, если проблема останется
+
+Пришли результаты трёх команд:
+
+1. find /opt/mqm/redist -name 'libmqm_r.so*' -ls
+2. echo "$LD_LIBRARY_PATH"
+3. LD_LIBRARY_PATH=/opt/mqm/redist/lib64 /home/stendadm@rc.nbrb.by/autotest_prod/venv/bin/python -c "import ibmmq; print('OK')"
+
+По ним можно будет определить, отсутствует ли сама библиотека, не хватает ли одной из её зависимостей или проблема только в окружении Gunicorn. Пока не нужно переустанавливать ibmmq или менять код отправки XML.
