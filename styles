@@ -1,46 +1,29 @@
-import os
-from pathlib import Path
-import ibmmq
+1.     home/
+2. sudo mkdir -p /opt/mqm/redist
+3. tar -xvf 9.2.5.0-IBM-MQC-Redist-LinuxX64.tar.gz -C /opt/mqm/redist
+4. cd /opt/mqm/redist/bin
+5. source setmqenv -s
+5.1 dspmqver
 
-# Настройки CCDT (аналогично вашему коду)
-os.environ["MQCHLLIB"] = r"C:\Program Files\IBM\MQ"
-os.environ["MQCHLTAB"] = "amqclchl.TAB"
+:
+stendadm@QL-DEV1004:/opt/mqm/redist/bin$ dspmqver
+Name:        IBM MQ
+Version:     9.2.5.0
+Level:       p925-L220207
+BuildType:   IKAP - (Production)
+Platform:    IBM MQ for Linux (x86-64 platform)
+Mode:        64-bit
+O/S:         Linux 6.12.94+deb13-amd64
+O/S Details: Debian GNU/Linux 13 (trixie)
+InstName:    MQNI92L22020700P
+InstDesc:    IBM MQ V9.2.5.0 (Redistributable)
+Primary:     N/A
+InstPath:    /opt/mqm/redist
+DataPath:    /home/stendadm@rc.nbrb.by/IBM/MQ/data
+MaxCmdLevel: 925
+LicenseType: License not accepted
 
-QM_NAME = "MQ10"
-QUEUE_NAME = "MX.IPSSRV01.FROM_PAY.LQ"
-XML_FILE = Path(r"D:\autotest\docs\смп_Z00_3012_3600.xml")
-
-def send_xml():
-    xml = XML_FILE.read_text(encoding="utf-8")
-
-    try:
-        # При использовании CCDT имя канала и адрес берутся из таблицы.
-        # В ibmmq для подключения только по имени менеджера (с CCDT) 
-        # нужно передать None или пустую строку для канала/хоста,
-        # но проще всего использовать QueueManager и connect_with_options.
-        
-        qmgr = ibmmq.QueueManager(None)
-        # Подключаемся только по имени QM. CCDT будет найден через переменные окружения.
-        qmgr.connect_with_options(QM_NAME)
-
-        queue = ibmmq.Queue(qmgr, QUEUE_NAME)
-        
-        # Отправляем байты (ibmmq, как и pymqi, принимает bytes или str)
-        queue.put(xml.encode("utf-8"))
-
-        print("XML успешно отправлен!")
-        
-        queue.close()
-        qmgr.disconnect()
-
-    except ibmmq.MQMIError as e:
-        print("Ошибка IBM MQ")
-        print("Reason code:", e.reason)
-        print(e)
-
-    except Exception as e:
-        print("Ошибка Python")
-        print(type(e).__name__, e)
-
-if __name__ == "__main__":
-    send_xml()
+6.  amqclchl.TAB  /home/stendadm@rc.nbrb.by/IBM/MQ/data/amqclchl.TAB
+7. export MQCHLIB=/home/stendadm@rc.nbrb.by
+8. export MQCHLTAB=amqclchl.TAB
+9. runmqsc -n
