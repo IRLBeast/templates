@@ -1,512 +1,82 @@
-У тебя уже выполнена основная подготовка: ты распаковала IBM MQ Client 9.2.5.0, настроила окружение и скопировала файл amqclchl.TAB. Теперь нужно подключить Python к IBM MQ через библиотеку ibmmq, проверить подключение к менеджеру очередей MQ10 и реализовать отправку XML в очередь MX.IPSSRV01.FROM_PAY.LQ.
-
-Я предлагаю идти поэтапно: сначала проверим системные библиотеки, затем установим Python-пакет, протестируем подключение и только после этого перенесём твою функцию send_xml_messages().
-
-1. Проверяем установку IBM MQ на Linux
-
-Ты работаешь с Debian 13 и IBM MQ Client 9.2.5.0, установленным в /opt/mqm/redist.
-
-Сначала выполни:
-
-cd /opt/mqm/redist/bin
-source setmqenv -s
-
-Посмотри версию:
-
-dspmqver
-
-У тебя она уже выводится корректно, значит исполняемые файлы IBM MQ доступны.
-
-Теперь проверь наличие библиотек:
-
-ls -l /opt/mqm/redist/lib64/libmqm*
-
-И отдельно проверь клиентскую библиотеку:
-
-ls -l /opt/mqm/redist/lib64/libmqic*
-
-Эти команды помогут убедиться, что в распакованном дистрибутиве присутствуют библиотеки MQ, необходимые клиентскому приложению.
-
-Важный момент: у тебя отображается LicenseType: License not accepted. Не игнорируй это сообщение. Прежде чем использовать клиент в рабочем окружении, проверь условия лицензии именно для своего redistributable-пакета IBM MQ и выполни предусмотренную IBM процедуру принятия лицензии, если она требуется. Не нужно считать, что успешный вывод dspmqver автоматически означает, что все условия использования выполнены.
-
-Официальная документация: принятие лицензии IBM MQ в Linux и описание redistributable-компонентов.
-
-2. Настраиваем переменные окружения
-
-Сейчас ты задаёшь MQCHLLIB, MQCHLTAB и LD_LIBRARY_PATH вручную. Для первого теста это нормально, но есть нюанс: настройки должны присутствовать в том же окружении, из которого запускается Python.
-
-Выполни:
-
-export MQ_FILE_PATH=/opt/mqm/redist
-export MQCHLLIB=/home/stendadm@rc.nbrb.by/IBM/MQ/data
-export MQCHLTAB=amqclchl.TAB
-export LD_LIBRARY_PATH=/opt/mqm/redist/lib64
-
-Поскольку setmqenv также настраивает окружение IBM MQ, вызывай его перед дополнительными настройками:
-
-source /opt/mqm/redist/bin/setmqenv -s
-
-export MQ_FILE_PATH=/opt/mqm/redist
-export MQCHLLIB=/home/stendadm@rc.nbrb.by/IBM/MQ/data
-export MQCHLTAB=amqclchl.TAB
-export LD_LIBRARY_PATH=/opt/mqm/redist/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
-
-Последняя команда сохраняет уже существующие пути в LD_LIBRARY_PATH, а не затирает их.
-
-Проверь результат:
-
-echo "$MQ_FILE_PATH"
-echo "$MQCHLLIB"
-echo "$MQCHLTAB"
-echo "$LD_LIBRARY_PATH"
-
-Проверь и сам файл таблицы:
-
-ls -l "$MQCHLLIB/$MQCHLTAB"
-
-Обрати внимание: таблица amqclchl.TAB должна содержать правильную конфигурацию для MQ10. Наличие файла ещё не гарантирует, что в нём указан нужный менеджер очередей.
-
-Также убедись, что клиенту разрешено подключаться к менеджеру MQ10, а в таблице есть подходящее определение подключения.
-
-3. Подготавливаем Python
-
-Библиотека ibmmq — это Python-обёртка над интерфейсом IBM MQ. Она поддерживает Python 3.9 и новее и позволяет работать с очередями практически так же, как pymqi. Для установки необходимы клиентские библиотеки MQ и компоненты разработки, а при сборке из исходников может понадобиться C-компилятор. 
-
-3.1. Проверяем Python
-
-Выполни:
-
-python3 --version
-python3 -m pip --version
-
-Если pip ещё не установлен, на Debian его можно установить через системный пакетный менеджер:
-
-sudo apt update
-sudo apt install python3-pip python3-venv build-essential python3-dev
-
-Если ты используешь виртуальное окружение для Django или другого проекта, лучше установить ibmmq именно туда, а не в системный Python.
-
-Например, если у тебя ещё нет отдельного окружения для тестирования:
-
-mkdir -p ~/mq_test
-cd ~/mq_test
-
-python3 -m venv .venv
-source .venv/bin/activate
-
-Если виртуальное окружение уже существует, создавать новое не нужно — просто активируй существующее.
-
-3.2. Устанавливаем ibmmq
-
-Перед установкой ещё раз выполни:
-
-export MQ_FILE_PATH=/opt/mqm/redist
-
-Затем:
-
-python -m pip install --upgrade pip
-python -m pip install ibmmq
-
-Официальный репозиторий библиотеки: [ibmmq на GitHub](https://github.com/ibm-messaging/mq-mqi-python?utm_source=chatgpt.com).
-
-Если установка завершилась ошибкой, пока не переходи к отправке XML. Сначала нужно устранить проблему со сборкой или поиском библиотек.
-
-3.3. Проверяем импорт
-
-Выполни:
-
-python -c "import ibmmq; print('ibmmq imported successfully')"
-
-Если увидишь:
-
-ibmmq imported successfully
-
-это означает, что Python смог импортировать библиотеку. Однако подключение к менеджеру очередей мы пока не проверили.
-
-Если появится ошибка наподобие:
-
-ImportError: libmqic.so: cannot open shared object file
-
-или сообщение о невозможности загрузить ibmmqc, нужно проверить LD_LIBRARY_PATH, расположение библиотек и результат выполнения ldd для бинарного модуля ibmmq.
-
-4. Проверяем подключение к MQ10
-
-Теперь нужно проверить, может ли Python подключиться к менеджеру очередей через твою таблицу каналов.
-
-Здесь есть важный нюанс: IBM MQ должен работать в клиентском режиме, а не пытаться подключиться к локальному менеджеру очередей через bindings.
-
-Для начала укажем клиентский режим:
-
-export MQ_CONNECT_MODE=CLIENT
-
-Переменные MQCHLLIB и MQCHLTAB у тебя уже настроены. Вместе с MQ_CONNECT_MODE=CLIENT они позволяют клиентскому приложению использовать таблицу каналов.
-
-Создай тестовый файл:
-
-cd ~/mq_test
-nano test_mq.py
-
-Вставь следующий код:
-
-import ibmmq
-
-QM_NAME = "MQ10"
-
-qmgr = None
-
-try:
-    print("Connecting to IBM MQ...")
-
-    qmgr = ibmmq.connect(QM_NAME)
-
-    print("Successfully connected to MQ10!")
-
-except Exception as exc:
-    print(f"Connection error: {type(exc).__name__}: {exc}")
-
-finally:
-    if qmgr is not None:
-        try:
-            qmgr.disconnect()
-            print("Disconnected from MQ10")
-        except Exception as exc:
-            print(f"Disconnect error: {exc}")
-
-Сохрани файл и запусти:
-
-python test_mq.py
-
-Какой результат ожидаем
-
-При успешном подключении увидишь примерно следующее:
-
-Connecting to IBM MQ...
-Successfully connected to MQ10!
-Disconnected from MQ10
-
-Если появится ошибка, пока не переходи к отправке XML.
-
-В частности, если возникнет ошибка 2059 (MQRC_Q_MGR_NOT_AVAILABLE), нужно будет проверить доступность менеджера, таблицу каналов и параметры соединения.
-
-Если возникнет ошибка 2538 (MQRC_HOST_NOT_AVAILABLE), следует проверить адрес и порт, указанные в таблице каналов, а также сетевую доступность сервера.
-
-Если будет ошибка авторизации, необходимо проверить права пользователя и настройки безопасности на стороне MQ.
-
-Если ibmmq.connect(QM_NAME) не использует твою таблицу каналов в установленной версии библиотеки, тогда отдельно настроим соединение через ibmmq.QueueManager и ibmmq.CD. Не стоит пока менять способ подключения без фактической ошибки.
-
-Документация и примеры API доступны в официальном репозитории ibmmq.
-
-
----
-
-5. Переносим твою функцию отправки XML на ibmmq
-
-После успешного подключения можно переносить основной код.
-
-Хорошая новость: интерфейс ibmmq во многом совместим с pymqi. Поэтому полностью переписывать твою программу не нужно.
-
-В частности, сохраняются основные операции:
-
-- подключение к менеджеру очередей;
-- открытие очереди;
-- отправка сообщений;
-- закрытие очереди;
-- отключение от менеджера очередей.
-
-Ниже приведён вариант твоего кода для Linux.
-
-Создай файл mq_sender.py:
-
-import os
-import re
-import ibmmq
-
-
-QM_NAME = "MQ10"
-QUEUE_NAME = "MX.IPSSRV01.FROM_PAY.LQ"
-
-
-def send_xml_messages(messages: list[str]) -> list[dict]:
-    results = []
-
-    qmgr = None
-    queue = None
-
-    try:
-        # Подключаемся к менеджеру очередей
-        qmgr = ibmmq.connect(QM_NAME)
-
-        # Открываем очередь для отправки сообщений
-        queue = ibmmq.Queue(qmgr, QUEUE_NAME)
-
-        for index, xml in enumerate(messages, start=1):
-            try:
-                # Кодируем XML в UTF-8 и отправляем
-                queue.put(xml.encode("utf-8"))
-
-                results.append({
-                    "index": index,
-                    "success": True,
-                    "error": "",
-                })
-
-            except Exception as exc:
-                results.append({
-                    "index": index,
-                    "success": False,
-                    "error": f"{type(exc).__name__}: {exc}",
-                })
-
-    except Exception as exc:
-        error = f"{type(exc).__name__}: {exc}"
-
-        for index in range(len(results) + 1, len(messages) + 1):
-            results.append({
-                "index": index,
-                "success": False,
-                "error": error,
-            })
-
-    finally:
-        if queue is not None:
-            try:
-                queue.close()
-            except Exception:
-                pass
-
-        if qmgr is not None:
-            try:
-                qmgr.disconnect()
-            except Exception:
-                pass
-
-    return results
-
-
-def get_optional_tag_value(
-    xml_text: str,
-    tag_name: str
-) -> str | None:
-    pattern = (
-        rf"<(?:\w+:)?{re.escape(tag_name)}>"
-        rf"\s*([^<]*?)\s*"
-        rf"</(?:\w+:)?{re.escape(tag_name)}>"
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/ibmmq/__init__.py", line 124, in <module>
+    from . import ibmmqc  # type: ignore
+    ^^^^^^^^^^^^^^^^^^^^
+ImportError: libmqm_r.so: cannot open shared object file: No such file or directory
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/gunicorn/workers/gthread.py", line 479, in handle
+    keepalive = self.handle_request(req, conn)
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/gunicorn/workers/gthread.py", line 678, in handle_request
+    respiter = self.wsgi(environ, resp.start_response)
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/core/handlers/wsgi.py", line 124, in __call__
+    response = self.get_response(request)
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/core/handlers/base.py", line 141, in get_response
+    response = self._middleware_chain(request)
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/core/handlers/exception.py", line 57, in inner
+    response = response_for_exception(request, exc)
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/core/handlers/exception.py", line 141, in response_for_exception
+    response = handle_uncaught_exception(
+        request, get_resolver(get_urlconf()), sys.exc_info()
     )
-
-    match = re.search(pattern, xml_text)
-
-    if not match:
-        return None
-
-    return match.group(1).strip()
-
-Что изменилось по сравнению с Windows
-
-1. Импорт библиотеки
-
-Было:
-
-import pymqi
-
-Стало:
-
-import ibmmq
-
-2. Настройки Windows удалены из Python
-
-Больше не нужны эти строки:
-
-os.environ["MQCHLLIB"] = r"C:\Program Files\IBM\MQ"
-os.environ["MQCHLTAB"] = "amqclchl.TAB"
-
-На Linux мы настраиваем переменные окружения перед запуском программы.
-
-3. Отправка сообщения
-
-Остаётся такой же по смыслу:
-
-queue.put(xml.encode("utf-8"))
-
-В библиотеке ibmmq метод put() принимает строку или байты. В нашем случае мы явно кодируем XML в UTF-8, как и в исходной программе.
-
-4. Получение значения XML-тега
-
-Функция get_optional_tag_value() практически не изменилась. Я добавил re.escape(tag_name), чтобы переданное имя тега интерпретировалось именно как текст, а не как часть регулярного выражения.
-
-Например:
-
-xml = """
-<Document>
-    <MsgId>ABC123</MsgId>
-    <Amount>1500.00</Amount>
-</Document>
-"""
-
-print(get_optional_tag_value(xml, "MsgId"))
-print(get_optional_tag_value(xml, "Amount"))
-print(get_optional_tag_value(xml, "MissingTag"))
-
-Результат:
-
-ABC123
-1500.00
-None
-
-
----
-
-6. Проверяем отправку одного XML-файла
-
-Для первого теста лучше использовать один XML, который ты уже успешно отправляла с Windows и который сервер принимает.
-
-Создай файл test_send.py:
-
-from pathlib import Path
-
-from mq_sender import send_xml_messages
-
-
-xml_path = Path("test_message.xml")
-
-xml_text = xml_path.read_text(encoding="utf-8")
-
-results = send_xml_messages([xml_text])
-
-for result in results:
-    print(result)
-
-Положи проверенный XML рядом с test_send.py и назови его test_message.xml.
-
-Запусти:
-
-python test_send.py
-
-Если отправка прошла успешно, ожидаемый результат:
-
-{
-    "index": 1,
-    "success": True,
-    "error": ""
-}
-
-Это подтверждает, что вызов put() завершился без ошибки. Но это ещё не гарантирует, что XML прошёл бизнес-валидацию на сервере. Нужно также проверить получение сообщения принимающей стороной и её ответ.
-
-> Важно: перед тестом убедись, что повторная отправка этого XML не приведёт к нежелательному повторному выполнению операции. Если XML содержит платёжные данные, используй безопасный тестовый сценарий.
-
-
-
-Если сообщение не отправляется
-
-Нам понадобится точный текст ошибки.
-
-Например, если увидишь:
-
-MQMIError: MQOPEN failed
-
-нужно будет посмотреть код причины ошибки: он поможет понять, связана ли проблема с правами доступа к очереди, её именем или соединением.
-
-Если put() возвращает ошибку, проверь:
-
-- разрешена ли отправка сообщений в MX.IPSSRV01.FROM_PAY.LQ;
-- открыта ли очередь для записи;
-- допускает ли сервер выбранный формат и размер сообщения;
-- корректно ли установлено соединение.
-
-
----
-
-7. Настраиваем постоянное окружение Linux
-
-Пока переменные окружения заданы командами export. Они действуют в текущей оболочке и процессах, запущенных из неё. После закрытия терминала настройки могут пропасть.
-
-Есть два варианта.
-
-Вариант A. Для ручного запуска
-
-Создай файл ~/mq_env.sh:
-
-nano ~/mq_env.sh
-
-Добавь:
-
-source /opt/mqm/redist/bin/setmqenv -s
-
-export MQ_FILE_PATH=/opt/mqm/redist
-
-export MQCHLLIB=/home/stendadm@rc.nbrb.by/IBM/MQ/data
-export MQCHLTAB=amqclchl.TAB
-
-export MQ_CONNECT_MODE=CLIENT
-
-export LD_LIBRARY_PATH=/opt/mqm/redist/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
-
-Сохрани файл.
-
-Теперь перед запуском программы достаточно выполнять:
-
-source ~/mq_env.sh
-
-Затем:
-
-cd ~/mq_test
-source .venv/bin/activate
-python test_send.py
-
-Вариант B. Для запуска Django или другого приложения
-
-Если ты собираешься вызывать отправку XML из Django, Gunicorn или фонового процесса, настройки нужно передать именно этому процессу.
-
-Например, если приложение запускается через systemd, можно добавить переменные в конфигурацию соответствующего сервиса или подключить отдельный файл через EnvironmentFile.
-
-Но не стоит бездумно добавлять source ~/mq_env.sh в .bashrc: службы systemd обычно не запускают интерактивную оболочку и не обязаны читать этот файл.
-
-Кроме того, LD_LIBRARY_PATH должен быть настроен до запуска Python, чтобы динамический загрузчик мог найти библиотеки IBM MQ.
-
-
----
-
-8. Что ещё важно проверить перед полноценным использованием
-
-Есть три момента, на которые я бы обратил внимание.
-
-Лицензия
-
-У тебя dspmqver показывает:
-
-LicenseType: License not accepted
-
-До использования IBM MQ необходимо разобраться с лицензией. Для установки после распаковки IBM описывает процедуру через mqlicense -accept, однако применимость этой команды и необходимые права нужно проверить для конкретного redistributable-пакета. Не принимай лицензию автоматически, не ознакомившись с условиями.
-
-Подробнее: документация IBM MQ по лицензированию.
-
-Путь к таблице каналов
-
-У тебя сейчас:
-
-/home/stendadm@rc.nbrb.by/IBM/MQ/data/amqclchl.TAB
-
-Убедись, что это именно тот файл, который использовался при успешном подключении с Windows, и что в нём есть актуальные параметры подключения.
-
-Версия Python и библиотеки
-
-Поскольку ты используешь IBM MQ Client 9.2.5.0, а ibmmq — более новая Python-обёртка, важно отдельно проверить совместимость установленной версии библиотеки с клиентом.
-
-Библиотека заявляет поддержку локального MQ runtime начиная с версии 9.1, однако конкретные возможности и исправления зависят от версии ibmmq. Для начала я бы установил пакет в отдельное виртуальное окружение и не менял рабочее окружение твоего приложения.
-
-
----
-
-В каком порядке я рекомендую действовать
-
-Чтобы не искать сразу несколько проблем, пройди этапы последовательно:
-
-1. Проверить наличие libmqic и других необходимых библиотек в /opt/mqm/redist/lib64.
-2. Установить и настроить лицензию в соответствии с условиями IBM.
-3. Настроить переменные окружения, включая MQ_CONNECT_MODE=CLIENT.
-4. Установить ibmmq в виртуальное окружение.
-5. Проверить импорт библиотеки.
-6. Запустить test_mq.py и проверить соединение с MQ10.
-7. Только после успешного подключения запустить test_send.py с одним XML.
-8. Проверить результат обработки сообщения на стороне сервера.
-
-Давай начнём с самого важного: выполни команды из первого раздела для проверки библиотек, а затем попробуй установить ibmmq. Если установка завершится ошибкой, пришли полный текст ошибки. Если установка пройдёт успешно, следующим шагом проверим подключение через твою таблицу каналов amqclchl.TAB.
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/core/handlers/exception.py", line 182, in handle_uncaught_exception
+    return debug.technical_500_response(request, *exc_info)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/views/decorators/csp.py", line 21, in _wrapped_sync_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/views/decorators/csp.py", line 21, in _wrapped_sync_view
+    response = view_func(request, *args, **kwargs)
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/views/debug.py", line 73, in technical_500_response
+    html = reporter.get_traceback_html()
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/views/debug.py", line 435, in get_traceback_html
+    c = Context(self.get_traceback_data(), use_l10n=False)
+                ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/views/debug.py", line 416, in get_traceback_data
+    c["raising_view_name"] = get_caller(self.request)
+                             ~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/views/debug.py", line 106, in get_caller
+    resolver_match = resolve(request.path)
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/urls/base.py", line 25, in resolve
+    return get_resolver(urlconf).resolve(path)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/urls/resolvers.py", line 676, in resolve
+    for pattern in self.url_patterns:
+                   ^^^^^^^^^^^^^^^^^
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/urls/resolvers.py", line 729, in url_patterns
+    patterns = getattr(self.urlconf_module, "urlpatterns", self.urlconf_module)
+                       ^^^^^^^^^^^^^^^^^^^
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/utils/functional.py", line 47, in __get__
+    res = instance.__dict__[self.name] = self.func(instance)
+                                         ~~~~~~~~~^^^^^^^^^^
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/django/urls/resolvers.py", line 722, in urlconf_module
+    return import_module(self.urlconf_name)
+  File "/usr/lib/python3.13/importlib/__init__.py", line 88, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 1026, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/config/urls.py", line 3, in <module>
+    from tests_manager.views import (run_test, index, aiskr, asubs, asbdb, rinok, isip, smp,
+    ...<2 lines>...
+                                     get_smp_outgoing_message, get_smp_messages_admin, get_smp_message_admin, smp_sender)
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/tests_manager/views.py", line 13, in <module>
+    from tests.smp.send_m import prepare_pacs008
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/tests/smp/send_m.py", line 3, in <module>
+    from tests.smp.smp_file_send import get_optional_tag_value
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/tests/smp/smp_file_send.py", line 3, in <module>
+    import ibmmq
+  File "/home/stendadm@rc.nbrb.by/autotest_prod/venv/lib/python3.13/site-packages/ibmmq/__init__.py", line 126, in <module>
+    import ibmmqc  # type: ignore  # Backward compatibility
+    ^^^^^^^^^^^^^
+ModuleNotFoundError: No module named 'ibmmqc'
