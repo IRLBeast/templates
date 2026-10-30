@@ -3,9 +3,9 @@
 3. tar -xvf 9.2.5.0-IBM-MQC-Redist-LinuxX64.tar.gz -C /opt/mqm/redist
 4. cd /opt/mqm/redist/bin
 5. source setmqenv -s
-5.1 dspmqver
+5.1 dspmqver 
 
-:
+выводит:
 stendadm@QL-DEV1004:/opt/mqm/redist/bin$ dspmqver
 Name:        IBM MQ
 Version:     9.2.5.0
@@ -23,7 +23,7 @@ DataPath:    /home/stendadm@rc.nbrb.by/IBM/MQ/data
 MaxCmdLevel: 925
 LicenseType: License not accepted
 
-6.  amqclchl.TAB  /home/stendadm@rc.nbrb.by/IBM/MQ/data/amqclchl.TAB
+6.копировать amqclchl.TAB в /home/stendadm@rc.nbrb.by/IBM/MQ/data/amqclchl.TAB
 7. export MQCHLIB=/home/stendadm@rc.nbrb.by
 8. export MQCHLTAB=amqclchl.TAB
 9. runmqsc -n
