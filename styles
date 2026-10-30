@@ -1,30 +1,39 @@
 import os
 from pathlib import Path
-import pymqi
+import ibmmq
 
-
+# Настройки CCDT (аналогично вашему коду)
 os.environ["MQCHLLIB"] = r"C:\Program Files\IBM\MQ"
 os.environ["MQCHLTAB"] = "amqclchl.TAB"
 
 QM_NAME = "MQ10"
 QUEUE_NAME = "MX.IPSSRV01.FROM_PAY.LQ"
-
 XML_FILE = Path(r"D:\autotest\docs\смп_Z00_3012_3600.xml")
-
 
 def send_xml():
     xml = XML_FILE.read_text(encoding="utf-8")
 
     try:
-        qmgr = pymqi.connect(QM_NAME)
+        # При использовании CCDT имя канала и адрес берутся из таблицы.
+        # В ibmmq для подключения только по имени менеджера (с CCDT) 
+        # нужно передать None или пустую строку для канала/хоста,
+        # но проще всего использовать QueueManager и connect_with_options.
+        
+        qmgr = ibmmq.QueueManager(None)
+        # Подключаемся только по имени QM. CCDT будет найден через переменные окружения.
+        qmgr.connect_with_options(QM_NAME)
 
-        queue = pymqi.Queue(qmgr, QUEUE_NAME)
-
+        queue = ibmmq.Queue(qmgr, QUEUE_NAME)
+        
+        # Отправляем байты (ibmmq, как и pymqi, принимает bytes или str)
         queue.put(xml.encode("utf-8"))
 
         print("XML успешно отправлен!")
+        
+        queue.close()
+        qmgr.disconnect()
 
-    except pymqi.MQMIError as e:
+    except ibmmq.MQMIError as e:
         print("Ошибка IBM MQ")
         print("Reason code:", e.reason)
         print(e)
