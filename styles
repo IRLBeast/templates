@@ -1,4 +1,4 @@
-1.     home/
+1. копировать архив в home/пользователь
 2. sudo mkdir -p /opt/mqm/redist
 3. tar -xvf 9.2.5.0-IBM-MQC-Redist-LinuxX64.tar.gz -C /opt/mqm/redist
 4. cd /opt/mqm/redist/bin
