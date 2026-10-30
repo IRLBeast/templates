@@ -1,29 +1,81 @@
-1. копировать архив в home/пользователь
-2. sudo mkdir -p /opt/mqm/redist
-3. tar -xvf 9.2.5.0-IBM-MQC-Redist-LinuxX64.tar.gz -C /opt/mqm/redist
-4. cd /opt/mqm/redist/bin
-5. source setmqenv -s
-5.1 dspmqver 
+import os
+import pymqi
+import re
 
-выводит:
-stendadm@QL-DEV1004:/opt/mqm/redist/bin$ dspmqver
-Name:        IBM MQ
-Version:     9.2.5.0
-Level:       p925-L220207
-BuildType:   IKAP - (Production)
-Platform:    IBM MQ for Linux (x86-64 platform)
-Mode:        64-bit
-O/S:         Linux 6.12.94+deb13-amd64
-O/S Details: Debian GNU/Linux 13 (trixie)
-InstName:    MQNI92L22020700P
-InstDesc:    IBM MQ V9.2.5.0 (Redistributable)
-Primary:     N/A
-InstPath:    /opt/mqm/redist
-DataPath:    /home/stendadm@rc.nbrb.by/IBM/MQ/data
-MaxCmdLevel: 925
-LicenseType: License not accepted
 
-6.копировать amqclchl.TAB в /home/stendadm@rc.nbrb.by/IBM/MQ/data/amqclchl.TAB
-7. export MQCHLIB=/home/stendadm@rc.nbrb.by
-8. export MQCHLTAB=amqclchl.TAB
-9. runmqsc -n
+os.environ["MQCHLLIB"] = r"C:\Program Files\IBM\MQ"
+os.environ["MQCHLTAB"] = "amqclchl.TAB"
+
+QM_NAME = "MQ10"
+QUEUE_NAME = "MX.IPSSRV01.FROM_PAY.LQ"
+
+
+def send_xml_messages(messages: list[str]) -> list[dict]:
+
+    results = []
+
+    qmgr = None
+    queue = None
+
+    try:
+        qmgr = pymqi.connect(QM_NAME)
+        queue = pymqi.Queue(qmgr, QUEUE_NAME)
+
+        for index, xml in enumerate(messages, start=1):
+            try:
+                queue.put(xml.encode("utf-8"))
+
+                results.append({
+                    "index": index,
+                    "success": True,
+                    "error": "",
+                })
+
+            except Exception as exc:
+                results.append({
+                    "index": index,
+                    "success": False,
+                    "error": f"{type(exc).__name__}: {exc}",
+                })
+
+    except Exception as exc:
+        error = f"{type(exc).__name__}: {exc}"
+
+        for index in range(len(results) + 1, len(messages) + 1):
+            results.append({
+                "index": index,
+                "success": False,
+                "error": error,
+            })
+
+    finally:
+        if queue is not None:
+            try:
+                queue.close()
+            except Exception:
+                pass
+
+        if qmgr is not None:
+            try:
+                qmgr.disconnect()
+            except Exception:
+                pass
+
+    return results
+
+def get_optional_tag_value(
+    xml_text: str,
+    tag_name: str
+) -> str | None:
+    pattern = (
+        rf"<(?:\w+:)?{tag_name}>"
+        rf"\s*([^<]*?)\s*"
+        rf"</(?:\w+:)?{tag_name}>"
+    )
+
+    match = re.search(pattern, xml_text)
+
+    if not match:
+        return None
+
+    return match.group(1).strip()
